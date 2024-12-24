@@ -3,6 +3,8 @@ session_start();
 
 include "connect.php";
 
+echo "delete";
+
 
 if ($_SESSION['role'] === "Admin" && isset($_GET['id'])) {
     $id = $_GET['id'];
@@ -16,12 +18,20 @@ if ($_SESSION['role'] === "Admin" && isset($_GET['id'])) {
 
         if (mysqli_num_rows($s_result) === 0) {
 
-            $_SESSION['notifChange'] = "Successfully Deleted";
+            $_SESSION['notifChange'] = "success|Successfully Deleted";
 
             header('Location: users');
             exit;
         }
+    } else {
+        echo "No shit";
     }
+}
+
+if (isset($_GET['id']) && $_SESSION['role'] != "Admin") {
+    $_SESSION['notifChange'] = "error|You are not authorized to use this feature";
+    header('Location: users');
+    exit;
 }
 
 if ($_SESSION['role'] === "Admin" && isset($_GET['itemid'])) {
@@ -36,12 +46,19 @@ if ($_SESSION['role'] === "Admin" && isset($_GET['itemid'])) {
 
         if ($s_result) {
 
-            $_SESSION['notifChange'] = "Successfully Deleted";
+            $_SESSION['notifChange'] = "success|Successfully Deleted";
 
             header('Location: additem');
             exit;
         }
     }
+}
+
+if (isset($_GET['itemid']) && $_SESSION['role'] != "Admin") {
+
+    $_SESSION['notifChange'] = "error|You are not authorized to use this feature";
+    header('Location: additem');
+    exit;
 }
 
 
@@ -57,7 +74,7 @@ if (($_SESSION['role'] === "Admin" || $_SESSION['role'] === "Faculty") && isset(
 
         if ($s_result) {
 
-            $_SESSION['notifChange'] = "Successfully Deleted";
+            $_SESSION['notifChange'] = "success|Successfully Deleted";
 
             header('Location: students');
             exit;

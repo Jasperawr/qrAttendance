@@ -4,9 +4,9 @@ header("Access-Control-Allow-Origin: *");
 
 // Normalize request URI
 $requestPath = parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH);
-$basePath = '/';
-$router = str_replace($basePath, '', $requestPath);
-$router = trim(strtolower($router), '/');
+$basePath = '/qrAttendance'; // Update base path to match your actual folder
+$router = str_replace($basePath, '', $requestPath); // Remove the base path
+$router = trim(strtolower($router), '/'); // Trim any leading or trailing slashes
 
 // Define routes
 $routes = [
@@ -19,6 +19,8 @@ $routes = [
     'users' => 'views/admin/user.php',
     'inventoryadmin' => 'views/admin/inventory.php',
     'additem' => 'views/admin/additem.php',
+    'profile' => 'views/profile.php',
+    'changepassword' => 'views/changePassword.php',
 ];
 
 // Match route or default to 404

@@ -98,7 +98,7 @@
 
 <script>
   const path = window.location.pathname;
-  const pathName = path.replace('/', '');
+  const pathName = path.replace('/qrAttendance/', '');
 
   const links = document.querySelectorAll("a.menu");
 

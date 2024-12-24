@@ -93,6 +93,169 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             header("Location: editstudent.php?id=$student_id");
             exit;
         }
+    } else if (isset($_POST['updateItem'])) {
+        $tempname = $_POST['name'];
+        $name = htmlspecialchars(ucwords($tempname), ENT_QUOTES, 'UTF-8');
+        $origid = htmlspecialchars($_POST['item_id'], ENT_QUOTES, 'UTF-8');
+        $currentDate = date('Y-m-d H:i:s');
+
+        $checkQuery = "SELECT * FROM `items` WHERE `item_id` = '$origid' LIMIT 1";
+        $checkResult = mysqli_query($conn, $checkQuery);
+
+        if ($checkResult && mysqli_num_rows($checkResult) > 0) {
+            // If an image is uploaded, process the file
+            if (!empty($_FILES['itempic']['name'])) {
+                $filename = $_FILES['itempic']['name'];
+                $type = $_FILES['itempic']['type'];
+                $tmp_name = $_FILES['itempic']['tmp_name'];
+
+                // Validate file type
+                $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                if (!in_array($type, $allowedTypes)) {
+                    echo "Error: Only JPEG, PNG, and GIF files are allowed.";
+                    exit;
+                }
+
+                // Encode image as base64
+                $imageData = file_get_contents($tmp_name);
+                $imageBase64 = base64_encode($imageData);
+
+                // Update both name, QR, and image
+                $updateQuery = "UPDATE `items` 
+                                SET item_name = '$name', image = '$imageBase64' 
+                                WHERE item_id = '$origid'";
+            } else {
+                // Update only name and QR
+                $updateQuery = "UPDATE `items` 
+                                SET item_name = '$name'
+                                WHERE item_id = '$origid'";
+            }
+
+            $updateResult = mysqli_query($conn, $updateQuery);
+
+            if ($updateResult) {
+                header("Location: inventoryadmin");
+                exit;
+            } else {
+                echo "Error updating item: " . mysqli_error($conn);
+            }
+        } else {
+            echo "Error: Item not found.";
+        }
+    } else if (isset($_POST['updateUser'])) {
+
+        $userid = htmlspecialchars($_POST['user_id'], ENT_QUOTES, 'UTF-8');
+        $currentDate = date('Y-m-d H:i:s');
+
+        $query = "SELECT userid FROM user_acount WHERE userid = '$userid' LIMIT 1";
+        $result = mysqli_query($conn, $query);
+
+        if (mysqli_num_rows($result) > 0) {
+            $updateFields = [];
+
+            if (!empty($_POST['name'])) {
+                $tempname = $_POST['name'];
+                $name = ucwords($tempname);
+                $updateFields[] = "name = '$name'";
+            }
+
+            if (!empty($_POST['email'])) {
+                $email = $_POST['email'];
+                $updateFields[] = "email = '$email'";
+            }
+
+            if (!empty($_POST['password'])) {
+                $password = $_POST['password'];
+                $hashedpwd = password_hash($password, PASSWORD_DEFAULT);
+                $updateFields[] = "password = '$hashedpwd'";
+            }
+
+            if (!empty($updateFields)) {
+
+                // Combine the fields into the query
+                $updateQuery = "UPDATE `user_acount` SET " . implode(', ', $updateFields) . " WHERE userid = '$userid'";
+
+                $updateResult = mysqli_query($conn, $updateQuery);
+
+                if ($updateResult) {
+                    if (!empty($_POST['email']) && !empty($_POST['password']) && !empty($_POST['name'])) {
+                        sendCredentials($email, $password, $name);
+                    }
+
+                    if (isset($_SESSION['userExist'])) {
+                        unset($_SESSION['userExist']);
+                    }
+
+                    header("Location: profile");
+                    exit;
+                } else {
+                    echo "Error updating user: " . mysqli_error($conn);
+                }
+            } else {
+                echo "No valid fields to update.";
+            }
+        } else {
+            // If the user doesn't exist, set session error and redirect
+            $_SESSION['userExist'] = "User does not exist. Please add a new user.";
+            header("Location: users");
+            exit;
+        }
+    } else if (isset($_POST['updatePassword'])) {
+
+        $userid = htmlspecialchars($_POST['user_id'], ENT_QUOTES, 'UTF-8'); // Sanitize the user ID
+        $currentDate = date('Y-m-d H:i:s'); // Current timestamp
+
+        // Check if the user exists
+        $query = "SELECT userid FROM user_acount WHERE userid = '$userid' LIMIT 1";
+        $result = mysqli_query($conn, $query);
+
+        if (mysqli_num_rows($result) > 0) {
+            // Verify passwords are set and match
+            if (!empty($_POST['password']) && !empty($_POST['confirmPassword'])) {
+                $password = $_POST['password'];
+                $confirmPassword = $_POST['confirmPassword'];
+
+                if ($password === $confirmPassword) {
+                    // Hash the new password
+                    $hashedpwd = password_hash($password, PASSWORD_DEFAULT);
+
+                    // Update the password in the database
+                    $updateQuery = "UPDATE `user_acount` 
+                                    SET password = '$hashedpwd', datetime = '$currentDate' 
+                                    WHERE userid = '$userid'";
+                    $updateResult = mysqli_query($conn, $updateQuery);
+
+                    if ($updateResult) {
+                        // Successfully updated password
+                        if (isset($_SESSION['passwordError'])) {
+                            unset($_SESSION['passwordError']);
+                        }
+
+                        $_SESSION['passwordSuccess'] = "Password updated successfully.";
+                        header("Location: changepassword");
+                        exit;
+                    } else {
+                        // Handle query error
+                        echo "Error updating password: " . mysqli_error($conn);
+                    }
+                } else {
+                    // Passwords do not match
+                    $_SESSION['passwordError'] = "Passwords do not match.";
+                    header("Location: changepassword");
+                    exit;
+                }
+            } else {
+                // Password fields are empty
+                $_SESSION['passwordError'] = "Password fields cannot be empty.";
+                header("Location: users");
+                exit;
+            }
+        } else {
+            // User does not exist
+            $_SESSION['passwordError'] = "User does not exist. Please check the user ID.";
+            header("Location: users");
+            exit;
+        }
     }
 }
 

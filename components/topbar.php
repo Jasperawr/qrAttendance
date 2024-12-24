@@ -83,10 +83,10 @@ include "./connect.php";
         <div class="z-50 hidden my-4 text-base list-none divide-y divide-gray-100 rounded-lg shadow-md bg-emerald-950" id="user-dropdown">
           <ul class="py-2" aria-labelledby="user-menu-button">
             <li>
-              <a href="#" class="block px-10 py-2 text-gray-200 hover:bg-gray-100 hover:text-gray-800">Profile</a>
+              <a href="profile" class="block px-10 py-2 text-gray-200 hover:bg-gray-100 hover:text-gray-800">Profile</a>
             </li>
             <li>
-              <a href="#" class="block px-10 py-2 text-gray-200 hover:bg-gray-100 hover:text-gray-800">Change Password</a>
+              <a href="changepassword" class="block px-10 py-2 text-gray-200 hover:bg-gray-100 hover:text-gray-800">Change Password</a>
             </li>
             <li>
               <a href="logout.php" class="block px-10 py-2 text-gray-200 hover:bg-gray-100 hover:text-gray-800">Sign out</a>
@@ -101,7 +101,7 @@ include "./connect.php";
 <!-- For route name and display -->
 <script>
   const route = window.location.pathname;
-  var routeName = route.replace('/', '');
+  var routeName = route.replace('/qrAttendance/', '');
 
   function upperInitial(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);

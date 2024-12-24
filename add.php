@@ -6,6 +6,11 @@ include "connect.php";
 include "sendmail.php";
 include "qrGenerator.php";
 
+require 'vendor/autoload.php';
+
+// Load PhpSpreadsheet library
+use PhpOffice\PhpSpreadsheet\IOFactory;
+
 
 date_default_timezone_set('Asia/Manila');
 
@@ -151,6 +156,87 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             } else {
                 echo "Error: " . mysqli_error($conn);
             }
+        }
+    } else if (isset($_POST['uploadExcel'])) {
+        // Handle Excel or CSV upload
+        if (isset($_FILES['excelFile'])) {
+            $fileName = $_FILES['excelFile']['tmp_name'];
+            $facultyId = $_SESSION['faculty_id'];
+
+            try {
+                // Load the uploaded file
+                $spreadsheet = IOFactory::load($fileName);
+                $sheet = $spreadsheet->getActiveSheet();
+                $rows = $sheet->toArray(); // Convert sheet to an array
+
+                $isHeader = true; // To skip the header row
+                foreach ($rows as $row) {
+                    if ($isHeader) {
+                        $isHeader = false;
+                        continue;
+                    }
+
+                    // Extract data from each row
+                    $name = ucwords($row[0]); // First column: Name
+                    $email = $row[1];        // Second column: Email
+                    $student_number = $row[2]; // Third column: Student Number
+                    $sectionName = $row[3];  // Fourth column: Section (e.g., "1B")
+                    $groupNumber = $row[4];  // Fifth column: Group (e.g., "G1")
+                    $imagePath = $row[5];    // Sixth column: Image Path (e.g., images/student1.jpg)
+
+                    // Generate unique ID
+                    $origid = uniqid();
+
+                    // Lookup section ID
+                    $sectionQuery = "SELECT id FROM yr_sec WHERE year_and_sec = '$sectionName' LIMIT 1";
+                    $sectionResult = mysqli_query($conn, $sectionQuery);
+                    if ($sectionResult && mysqli_num_rows($sectionResult) > 0) {
+                        $sectionId = mysqli_fetch_assoc($sectionResult)['id'];
+                    } else {
+                        echo "Error: Section '$sectionName' not found.<br>";
+                        continue;
+                    }
+
+                    // Lookup group ID
+                    $groupQuery = "SELECT id FROM group_no WHERE group_number = '$groupNumber' LIMIT 1";
+                    $groupResult = mysqli_query($conn, $groupQuery);
+                    if ($groupResult && mysqli_num_rows($groupResult) > 0) {
+                        $groupId = mysqli_fetch_assoc($groupResult)['id'];
+                    } else {
+                        echo "Error: Group '$groupNumber' not found.<br>";
+                        continue;
+                    }
+
+                    // Check if student exists
+                    $checkQuery = "SELECT name, email FROM student WHERE name = '$name' AND email = '$email' LIMIT 1";
+                    $checkResult = mysqli_query($conn, $checkQuery);
+                    if (mysqli_num_rows($checkResult) == 0) {
+                        // Read image file and encode as base64 if it exists
+                        $imageBase64 = null; // Default to null
+                        if (!empty($imagePath) && file_exists($imagePath)) {
+                            $imageData = file_get_contents($imagePath);
+                            $imageBase64 = base64_encode($imageData);
+                        }
+
+                        // Insert student
+                        $query = "INSERT INTO student (user_id, name, email, student_number, yr_sec, group_no, avatar, faculty_id, datetime) 
+                                  VALUES ('$origid', '$name', '$email', '$student_number', '$sectionId', '$groupId', '$imageBase64', '$facultyId', '$currentDate')";
+                        if (!mysqli_query($conn, $query)) {
+                            echo "Error inserting student: " . mysqli_error($conn) . "<br>";
+                        }
+                    } else {
+                        echo "Student '$name' with email '$email' already exists.<br>";
+                    }
+                }
+
+                echo "File uploaded and processed successfully.";
+                header("Location: addstudent");
+                exit;
+            } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
+                echo "Error reading Excel file: " . $e->getMessage();
+            }
+        } else {
+            echo "No file uploaded.";
         }
     }
 

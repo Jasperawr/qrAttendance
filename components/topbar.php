@@ -14,53 +14,55 @@ include "./connect.php";
       <p id="pathName" class="font-extrabold tracking-wide text-gray-900 text-[18px]"></p>
     </div>
 
+    <div id="alert-container" class="fixed flex flex-col justify-center items-center z-50 w-full">
+
+    </div>
+
     <div class="flex items-center flex-between font-poppins">
 
-      <div class="flex w-full mr-5 gap-5">
-        <!-- Dropdown for Year & Section -->
-        <select name="section" id="section" class="cursor-pointer px-5 border-2 border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 hover:bg-gray-50 w-[180px] py-2">
-          <option selected disabled>Year&Section</option>
-          <?php
-          // Query to get Year & Section data
-          $ys_query = "SELECT * FROM yr_sec";
-          $ys_result = mysqli_query($conn, $ys_query);
+      <!-- <div class="flex w-full mr-5 gap-5">
+      <select name="section" id="section" class="cursor-pointer px-5 border-2 border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 hover:bg-gray-50 w-[180px] py-2">
+        <option selected disabled>Year&Section</option>
+        <?php
+        // Query to get Year & Section data
+        $ys_query = "SELECT * FROM yr_sec";
+        $ys_result = mysqli_query($conn, $ys_query);
 
-          if ($ys_result && mysqli_num_rows($ys_result) > 0) {
-            while ($ys_row = mysqli_fetch_assoc($ys_result)) {
-              // Check if the session value matches the current row's ID
-              $selected = isset($_SESSION['section']) && $_SESSION['section'] == $ys_row['id'] ? 'selected' : '';
-          ?>
-              <option value="<?php echo $ys_row['id']; ?>" <?php echo $selected; ?>>
-                <?php echo htmlspecialchars($ys_row['year_and_sec']); ?>
-              </option>
-          <?php
-            }
+        if ($ys_result && mysqli_num_rows($ys_result) > 0) {
+          while ($ys_row = mysqli_fetch_assoc($ys_result)) {
+            // Check if the session value matches the current row's ID
+            $selected = isset($_SESSION['section']) && $_SESSION['section'] == $ys_row['id'] ? 'selected' : '';
+        ?>
+            <option value="<?php echo $ys_row['id']; ?>" <?php echo $selected; ?>>
+              <?php echo htmlspecialchars($ys_row['year_and_sec']); ?>
+            </option>
+        <?php
           }
-          ?>
-        </select>
+        }
+        ?>
+      </select>
 
-        <!-- Dropdown for Group Number -->
-        <select name="groupnumber" id="groupnumber" class="cursor-pointer px-5 border-2 border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 hover:bg-gray-50 w-[130px] py-2">
-          <option selected disabled>Group</option>
-          <?php
-          // Query to get Group Number data
-          $gn_query = "SELECT * FROM group_no";
-          $gn_result = mysqli_query($conn, $gn_query);
+      <select name="groupnumber" id="groupnumber" class="cursor-pointer px-5 border-2 border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 hover:bg-gray-50 w-[130px] py-2">
+        <option selected disabled>Group</option>
+        <?php
+        // Query to get Group Number data
+        $gn_query = "SELECT * FROM group_no";
+        $gn_result = mysqli_query($conn, $gn_query);
 
-          if ($gn_result && mysqli_num_rows($gn_result) > 0) {
-            while ($gn_row = mysqli_fetch_assoc($gn_result)) {
-              // Check if the session value matches the current row's ID
-              $selected = isset($_SESSION['groupnumber']) && $_SESSION['groupnumber'] == $gn_row['id'] ? 'selected' : '';
-          ?>
-              <option value="<?php echo $gn_row['id']; ?>" <?php echo $selected; ?>>
-                <?php echo htmlspecialchars($gn_row['group_number']); ?>
-              </option>
-          <?php
-            }
+        if ($gn_result && mysqli_num_rows($gn_result) > 0) {
+          while ($gn_row = mysqli_fetch_assoc($gn_result)) {
+            // Check if the session value matches the current row's ID
+            $selected = isset($_SESSION['groupnumber']) && $_SESSION['groupnumber'] == $gn_row['id'] ? 'selected' : '';
+        ?>
+            <option value="<?php echo $gn_row['id']; ?>" <?php echo $selected; ?>>
+              <?php echo htmlspecialchars($gn_row['group_number']); ?>
+            </option>
+        <?php
           }
-          ?>
-        </select>
-      </div>
+        }
+        ?>
+      </select>
+    </div> -->
 
 
       <div class="border border-gray-300 content-none h-[30px] mr-[20px]"></div>
@@ -78,6 +80,8 @@ include "./connect.php";
             <p class="text-gray-500 tracking-wide text-start font-medium "><?php echo $_SESSION['role']; ?></p>
           </div>
         </button>
+
+
 
         <!-- Dropdown menu -->
         <div class="z-50 hidden my-4 text-base list-none divide-y divide-gray-100 rounded-lg shadow-md bg-emerald-950" id="user-dropdown">
@@ -115,7 +119,14 @@ include "./connect.php";
     routeName = 'Inventory Management';
   } else if (routeName === "additem") {
     routeName = 'Add Item';
+  } else if (routeName === "printattendance") {
+    routeName = 'Print Attendance';
+  } else if (routeName === "printreport") {
+    routeName = 'Print Report';
+  } else if (routeName === "") {
+    routeName = 'Home';
   }
+
 
   let titleName = upperInitial(routeName);
   var titlePage = document.getElementById('pathName');
@@ -127,55 +138,55 @@ include "./connect.php";
 
 <!-- If the dropdown is change create a session for it -->
 <script>
-  function updateSession(selectedElementId, newValue) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', 'session.php', true);
-    xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-    xhr.send(selectedElementId + '=' + encodeURIComponent(newValue));
+  // function updateSession(selectedElementId, newValue) {
+  //   var xhr = new XMLHttpRequest();
+  //   xhr.open('POST', 'session.php', true);
+  //   xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+  //   xhr.send(selectedElementId + '=' + encodeURIComponent(newValue));
 
-    xhr.onload = function() {
-      if (xhr.status == 200) {
-        console.log('Session variable set successfully for ' + selectedElementId);
-        console.log(xhr.responseText);
-      } else {
-        console.error('Error setting session variable.');
-      }
-    };
-  }
+  //   xhr.onload = function() {
+  //     if (xhr.status == 200) {
+  //       console.log('Session variable set successfully for ' + selectedElementId);
+  //       console.log(xhr.responseText);
+  //     } else {
+  //       console.error('Error setting session variable.');
+  //     }
+  //   };
+  // }
 
-  function reloadTable() {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'attendanceLogs.php', true);
+  // function reloadTable() {
+  //   var xhr = new XMLHttpRequest();
+  //   xhr.open('GET', 'attendanceLogs.php', true);
 
-    xhr.readyState = function() {
-      console.log(xhr.statusText);
-      if (xhr.status == 200) {
-        console.log('Table reloaded succesfully');
-      } else {
-        console.error('Error setting session variable.');
-      }
-    };
-  }
+  //   xhr.readyState = function() {
+  //     console.log(xhr.statusText);
+  //     if (xhr.status == 200) {
+  //       console.log('Table reloaded succesfully');
+  //     } else {
+  //       console.error('Error setting session variable.');
+  //     }
+  //   };
+  // }
 
-  document.addEventListener('DOMContentLoaded', function() {
-    // Select the first select element
-    var selectedSection = document.getElementById('section');
+  // document.addEventListener('DOMContentLoaded', function() {
+  //   // Select the first select element
+  //   var selectedSection = document.getElementById('section');
 
-    // Add change event listener
-    selectedSection.addEventListener('change', function() {
-      var selectedOption = selectedSection.value;
-      updateSession('section', selectedOption);
-      reloadTable();
-    });
+  //   // Add change event listener
+  //   selectedSection.addEventListener('change', function() {
+  //     var selectedOption = selectedSection.value;
+  //     updateSession('section', selectedOption);
+  //     reloadTable();
+  //   });
 
-    // Select the second select element
-    var selectedGroup = document.getElementById('groupnumber');
+  //   // Select the second select element
+  //   var selectedGroup = document.getElementById('groupnumber');
 
-    // Add change event listener
-    selectedGroup.addEventListener('change', function() {
-      var selectedOption = selectedGroup.value;
-      updateSession('groupnumber', selectedOption);
-      reloadTable();
-    });
-  });
+  //   // Add change event listener
+  //   selectedGroup.addEventListener('change', function() {
+  //     var selectedOption = selectedGroup.value;
+  //     updateSession('groupnumber', selectedOption);
+  //     reloadTable();
+  //   });
+  // });
 </script>

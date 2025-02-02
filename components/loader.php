@@ -1,10 +1,10 @@
-<div class="loading h-screen w-screen flex justify-center items-center z-10">
-    <div class="container">
-        <div class="dot"></div>
-        <div class="dot"></div>
-        <div class="dot"></div>
-        <div class="dot"></div>
-    </div>
+<div class="loading h-screen w-screen flex justify-center items-center z-10" style="display: none;">
+  <div class="container">
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
 </div>
 
 <style>
@@ -18,7 +18,7 @@
     width: calc(var(--uib-size) * 0.51);
     height: calc(var(--uib-size) * 0.51);
   }
-  
+
   .dot {
     position: relative;
     display: flex;

@@ -3,10 +3,13 @@
 
 include "connect.php";
 
+
 $section = isset($_SESSION['section']) ? $_SESSION['section'] : null;
 $group_no = isset($_SESSION['groupnumber']) ? $_SESSION['groupnumber'] : null;
 
-$query = "SELECT * from student ORDER BY id DESC";
+$faculty_id = isset($_SESSION['faculty_id']) ? $_SESSION['faculty_id'] : null;
+
+$query = "SELECT * from student where faculty_id = '$faculty_id'  ORDER BY id DESC";
 $result = mysqli_query($conn, $query);
 
 if ($result && mysqli_num_rows($result) > 0) {
@@ -31,7 +34,7 @@ if ($result && mysqli_num_rows($result) > 0) {
         }
 
         $yearAndSec = "";
-        $y_q = "SELECT * from yr_sec LEFT JOIN student ON yr_sec.id = student.yr_sec where student.yr_sec = $yrsec LIMIT 1";
+        $y_q = "SELECT * from yr_sec LEFT JOIN student ON yr_sec.id = student.yr_sec where student.faculty_id = $faculty_id LIMIT 1";
         $y_r = mysqli_query($conn, $y_q);
         if (mysqli_num_rows($y_r) > 0) {
             $y_row = mysqli_fetch_assoc($y_r);
@@ -39,7 +42,7 @@ if ($result && mysqli_num_rows($result) > 0) {
         }
 
         $groupNo = "";
-        $gn_q = "SELECT * from group_no LEFT JOIN student ON group_no.id = student.group_no where student.group_no = $groupno LIMIT 1";
+        $gn_q = "SELECT * from group_no LEFT JOIN student ON group_no.id = student.group_no where student.faculty_id = $faculty_id LIMIT 1";
         $gn_r = mysqli_query($conn, $gn_q);
         if (mysqli_num_rows($gn_r) > 0) {
             $gn_row = mysqli_fetch_assoc($gn_r);
@@ -50,6 +53,14 @@ if ($result && mysqli_num_rows($result) > 0) {
 ?>
 
         <tr class="bg-white border-b ">
+            <td class="text-center">
+                <input
+                    type="checkbox"
+                    id="checkboxes<?php echo $row['id']; ?>"
+                    name="delete_ids[]"
+                    value="<?php echo $row['id']; ?>"
+                    class="checkboxes w-4 h-4 text-red-500 bg-gray-100 border-gray-300 rounded focus:ring-red-400 focus:ring-2" />
+            </td>
             <td scope="row" class="flex items-center px-6 py-4 text-gray-900 whitespace-nowrap">
                 <img class="w-10 h-10 rounded-full" src="<?php echo  $row['avatar'] ? "data:image/jpeg;base64, " . base64_encode($row['avatar']) : "https://ui-avatars.com/api/?name=" . $name . "&background=random"; ?>" alt="Jese image">
                 <div class="ps-3">
@@ -116,7 +127,7 @@ if ($result && mysqli_num_rows($result) > 0) {
                         </div>
 
                         <div id="allinputs<?php echo $row['id']; ?>" class="w-full">
-                            <label for="name" class="tracking-wide block mb-1 text-[11px] text-gray-900 uppercase font-bold">Student Name</label>
+                            <label for="name<?php echo $row['id']; ?>" class="tracking-wide block mb-1 text-[11px] text-gray-900 uppercase font-bold">Student Name</label>
 
                             <div id="name<?php echo $row['id']; ?>" class="w-full">
                                 <input type="text" value="<?php echo $row['name']; ?>" class="w-full border border-gray-300 text-gray-900 text-sm rounded focus:ring-blue-500 focus:border-blue-500 block p-2.5 outline-0 placeholder:tracking-wide"

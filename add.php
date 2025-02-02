@@ -34,6 +34,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $section = $_POST['section'];
         $groupnumber = $_POST['groupnumber'];
 
+        $year_level = $_POST['year_level'];
+        $semester = $_POST['semester'];
+        $academic_year = $_POST['academic_year'];
+        $program = $_POST['program'];
+        $class = $_POST['class'];
+
         // Check if the user exists
         $query = "SELECT name, email FROM student WHERE name = '$name' AND email = '$email' LIMIT 1";
         $result = mysqli_query($conn, $query);
@@ -48,8 +54,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             $facultyId = $_SESSION['faculty_id'];
 
-            $sql = "INSERT INTO `student` (user_id, name, email, student_number, yr_sec, group_no, faculty_id, avatar, datetime) 
-                        VALUES ('$origid', '$name', '$email', '$student_number', '$section', '$groupnumber', '$facultyId', '$avatarBlob', '$currentDate')";
+            $sql = "INSERT INTO `student` (user_id, name, email, student_number, class, semester, year_level, academic_year, program, faculty_id, avatar, datetime) 
+                        VALUES ('$origid', '$name', '$email', '$student_number', '$class', '$semester', '$year_level', '$academic_year', '$program', '$facultyId', '$avatarBlob', '$currentDate')";
             $sql_result = mysqli_query($conn, $sql);
 
             if ($sql_result) {
@@ -65,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     if (isset($_SESSION['studentExist'])) {
                         unset($_SESSION['studentExist']);
                     }
-                    header("Location: addstudent");
+                    header("Location: addstudent?typeUpload=single");
                     exit;
                 }
             } else {
@@ -163,82 +169,108 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $fileName = $_FILES['excelFile']['tmp_name'];
             $facultyId = $_SESSION['faculty_id'];
 
-            try {
-                // Load the uploaded file
-                $spreadsheet = IOFactory::load($fileName);
-                $sheet = $spreadsheet->getActiveSheet();
-                $rows = $sheet->toArray(); // Convert sheet to an array
+            $year_level = $_POST['year_level1'];
+            $semester = $_POST['semester1'];
+            $academic_year = $_POST['academic_year1'];
+            $program = $_POST['program1'];
+            $class = $_POST['class1'];
 
-                $isHeader = true; // To skip the header row
-                foreach ($rows as $row) {
-                    if ($isHeader) {
-                        $isHeader = false;
-                        continue;
-                    }
+            $studentNos = $_POST['student_no'] ?? [];
+            $fullNames = $_POST['full_name'] ?? [];
+            $emails = $_POST['email'] ?? [];
 
-                    // Extract data from each row
-                    $name = ucwords($row[0]); // First column: Name
-                    $email = $row[1];        // Second column: Email
-                    $student_number = $row[2]; // Third column: Student Number
-                    $sectionName = $row[3];  // Fourth column: Section (e.g., "1B")
-                    $groupNumber = $row[4];  // Fifth column: Group (e.g., "G1")
-                    $imagePath = $row[5];    // Sixth column: Image Path (e.g., images/student1.jpg)
+            for ($i = 0; $i < count($studentNos); $i++) {
+                $studentNo = $conn->real_escape_string($studentNos[$i]);
+                $fullName = $conn->real_escape_string($fullNames[$i]);
+                $email = $conn->real_escape_string($emails[$i]);
 
-                    // Generate unique ID
-                    $origid = uniqid();
-
-                    // Lookup section ID
-                    $sectionQuery = "SELECT id FROM yr_sec WHERE year_and_sec = '$sectionName' LIMIT 1";
-                    $sectionResult = mysqli_query($conn, $sectionQuery);
-                    if ($sectionResult && mysqli_num_rows($sectionResult) > 0) {
-                        $sectionId = mysqli_fetch_assoc($sectionResult)['id'];
-                    } else {
-                        echo "Error: Section '$sectionName' not found.<br>";
-                        continue;
-                    }
-
-                    // Lookup group ID
-                    $groupQuery = "SELECT id FROM group_no WHERE group_number = '$groupNumber' LIMIT 1";
-                    $groupResult = mysqli_query($conn, $groupQuery);
-                    if ($groupResult && mysqli_num_rows($groupResult) > 0) {
-                        $groupId = mysqli_fetch_assoc($groupResult)['id'];
-                    } else {
-                        echo "Error: Group '$groupNumber' not found.<br>";
-                        continue;
-                    }
-
-                    // Check if student exists
-                    $checkQuery = "SELECT name, email FROM student WHERE name = '$name' AND email = '$email' LIMIT 1";
-                    $checkResult = mysqli_query($conn, $checkQuery);
-                    if (mysqli_num_rows($checkResult) == 0) {
-                        // Read image file and encode as base64 if it exists
-                        $imageBase64 = null; // Default to null
-                        if (!empty($imagePath) && file_exists($imagePath)) {
-                            $imageData = file_get_contents($imagePath);
-                            $imageBase64 = base64_encode($imageData);
-                        }
-
-                        // Insert student
-                        $query = "INSERT INTO student (user_id, name, email, student_number, yr_sec, group_no, avatar, faculty_id, datetime) 
-                                  VALUES ('$origid', '$name', '$email', '$student_number', '$sectionId', '$groupId', '$imageBase64', '$facultyId', '$currentDate')";
-                        if (!mysqli_query($conn, $query)) {
-                            echo "Error inserting student: " . mysqli_error($conn) . "<br>";
-                        }
-                    } else {
-                        echo "Student '$name' with email '$email' already exists.<br>";
-                    }
+                // Skip empty rows
+                if (empty($studentNo) || empty($fullName) || empty($email)) {
+                    continue;
                 }
 
-                echo "File uploaded and processed successfully.";
-                header("Location: addstudent");
-                exit;
-            } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
-                echo "Error reading Excel file: " . $e->getMessage();
+                $origid = uniqid();
+                $sql = "INSERT INTO `student` (user_id, name, student_number, email, class, semester, year_level, academic_year, program, faculty_id, datetime)
+                                VALUES ('$origid', '$fullName', '$studentNo', '$email', '$class', '$semester', '$year_level', '$academic_year', '$program', '$facultyId', NOW())";
+
+                if (!mysqli_query($conn, $sql)) {
+
+                    sendMail($email, $origid, $fullName);
+                    echo "Error inserting student: " . mysqli_error($conn) . "<br>";
+                }
             }
         } else {
             echo "No file uploaded.";
         }
     }
+    if (isset($_POST['markAbsent'])) {
+        date_default_timezone_set('Asia/Manila');
+        $currentDateTime = date('Y-m-d H:i:s');
+        $faculty_id = isset($_SESSION['faculty_id']) ? $_SESSION['faculty_id'] : null;
+        $mark_ids = $_POST['mark_ids'] ?? [];
+
+        // Check if there are user IDs in the array
+        if (!empty($mark_ids)) {
+            foreach ($mark_ids as $unique_id) {
+                // Fetch student details
+                $checkid = "SELECT * FROM student WHERE user_id = '$unique_id'";
+                $result = mysqli_query($conn, $checkid);
+
+                if ($result && mysqli_num_rows($result) > 0) {
+                    $row = mysqli_fetch_assoc($result);
+
+                    $class = $row['class'];
+                    $program = $row['program'];
+                    $semester = $row['semester'];
+                    $academic_year = $row['academic_year'];
+                    $year_level = $row['year_level'];
+                    $room = isset($_SESSION['room']) ? $_SESSION['room'] : null;
+
+                    // Check if attendance exists for the current date
+                    $attendanceCheckQuery = "SELECT * FROM attendance_log WHERE user_id = '$unique_id' AND DATE(attendatetime) = CURDATE()";
+                    $attendanceCheckResult = mysqli_query($conn, $attendanceCheckQuery);
+
+                    if (mysqli_num_rows($attendanceCheckResult) > 0) {
+                        // If attendance exists and the status is 'Present', update it to 'Absent' and set modified_attendatetime
+                        $attendance = mysqli_fetch_assoc($attendanceCheckResult);
+                        if ($attendance['status'] == 'Present') {
+                            $updateQuery = "UPDATE attendance_log 
+                                            SET status = 'Absent', modified_attendatetime = '$currentDateTime' 
+                                            WHERE user_id = '$unique_id' AND DATE(attendatetime) = CURDATE()";
+
+                            if (mysqli_query($conn, $updateQuery)) {
+                                echo "Attendance for user_id $unique_id updated to Absent.<br>";
+                                header("Location: home");
+                            } else {
+                                echo "Error updating attendance for user_id $unique_id: " . mysqli_error($conn) . "<br>";
+                            }
+                        } else {
+                            echo "User $unique_id is already marked as Absent.<br>";
+                            header("Location: home");
+                        }
+                    } else {
+                        // If attendance doesn't exist for today, insert a new entry as Absent
+                        $query = "INSERT INTO attendance_log (user_id, status, class, program, academic_year, year_level, semester, room, faculty_id, attendatetime) 
+                                 VALUES ('$unique_id', 'Absent', '$class', '$program', '$academic_year', '$year_level', '$semester', '$room', '$faculty_id', '$currentDateTime')";
+
+                        if (mysqli_query($conn, $query)) {
+                            echo "Attendance for user_id $unique_id marked as Absent.<br>";
+                            header("Location: home");
+                        } else {
+                            echo "Error inserting attendance for user_id $unique_id: " . mysqli_error($conn) . "<br>";
+                        }
+                    }
+                } else {
+                    echo "No student found with the given unique_id $unique_id.<br>";
+                }
+            }
+        } else {
+            echo "No user IDs provided.";
+        }
+    }
+
+
+
 
 
     mysqli_close($conn);

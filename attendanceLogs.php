@@ -1,76 +1,71 @@
 <?php
-
 include "connect.php";
 
-$section = $_SESSION['section'];
-$group_no = $_SESSION['groupnumber'];
+// Retrieve the faculty ID from the session
 $faculty_id = isset($_SESSION['faculty_id']) ? $_SESSION['faculty_id'] : null;
 
+// Set the current date
+$currdate = date('Y-m-d');
+
+// Query to select all students and their attendance status
 $query = "
     SELECT 
-        a.*, 
-        s.name, 
-        s.email, 
-        s.student_number, 
-        s.avatar
+        s.user_id,
+        s.name,
+        s.email,
+        s.student_number,
+        s.avatar,
+        s.class,
+        s.semester,
+        a.status,
+        a.room,
+        a.attendatetime
     FROM 
-        attendance_log a
-    INNER JOIN 
+        attendance_log a 
+    LEFT JOIN 
         student s
     ON 
-        a.user_id = s.user_id
+        s.user_id = a.user_id
     WHERE 
-        a.yr_sec = '$section' AND 
-        a.group_no = '$group_no' AND
         s.faculty_id = '$faculty_id'
 ";
+
 $result = mysqli_query($conn, $query);
 
 if ($result && mysqli_num_rows($result) > 0) {
     while ($row = mysqli_fetch_assoc($result)) {
         $user_id = $row['user_id'];
-        $status = $row['status']; // status is from the attendance_log
+        $status = $row['status']; // If NULL, defaults to 'absent'
         $attendatetime = $row['attendatetime'];
-
-        $yearAndSec = "";
-        $y_q = "SELECT * from yr_sec LEFT JOIN attendance_log ON yr_sec.id = attendance_log.yr_sec where attendance_log.yr_sec = $section LIMIT 1";
-        $y_r = mysqli_query($conn, $y_q);
-        if (mysqli_num_rows($y_r) > 0) {
-            $y_row = mysqli_fetch_assoc($y_r);
-            $yearAndSec = $y_row['year_and_sec'];
-        }
-
-        $groupNo = "";
-        $gn_q = "SELECT * from group_no LEFT JOIN attendance_log ON group_no.id = attendance_log.group_no where attendance_log.group_no = $group_no LIMIT 1";
-        $gn_r = mysqli_query($conn, $gn_q);
-        if (mysqli_num_rows($gn_r) > 0) {
-            $gn_row = mysqli_fetch_assoc($gn_r);
-            $groupNo = $gn_row['group_number'];
-        }
 ?>
 
         <tr class="bg-white border-b ">
-            <td scope="row" class="flex items-center px-6 py-4 text-gray-900 whitespace-nowrap">
-                <img class="w-10 h-10 rounded-full" src="data:image/jpeg;base64,<?php echo base64_encode($row['avatar']); ?>" alt="Student Avatar">
-                <div class="ps-3">
-                    <div class="text-base font-semibold"><?php echo ucwords($row['name']); ?></div>
-                    <div class="font-normal text-gray-500"><?php echo $row['email']; ?></div>
+            <td scope="row" class="px-2 py-2 text-gray-900 whitespace-nowrap">
+                <div class="flex items-center overflow-x-auto scrollbar-hide">
+                    <img class="w-10 h-10 rounded-full flex-shrink-0" src="<?php echo  $row['avatar'] ? "data:image/jpeg;base64, " . base64_encode($row['avatar']) : "https://ui-avatars.com/api/?name=" . $row['name'] . "&background=random"; ?>" alt="Jese image">
+                    <div class="ps-3 flex-shrink-0">
+                        <div class="text-base font-semibold text-xs"><?php echo ucwords($row['name']); ?></div>
+                        <div class="font-normal text-gray-500 text-xs"><?php echo $row['email']; ?></div>
+                    </div>
                 </div>
             </td>
-            <td class="px-6 py-4 text-xs">
+            <td class="px-3 py-2 text-xs">
                 <?php echo $row['student_number']; ?>
             </td>
-            <td class="px-6 py-4 text-center">
-                <?php echo strtoupper($yearAndSec); ?>
+            <td class="classAttendance px-3 py-2 text-xs">
+                <?php echo  $row['class']; ?>
             </td>
-            <td class="px-6 py-4 text-center">
-                <?php echo strtoupper($groupNo); ?>
+            <td class="px-3 py-2 text-xs">
+                <?php echo $row['semester']; ?>
             </td>
-            <td class=" statusAttendance px-6 py-4 font-bold <?php echo $status == 'present' ? 'text-green-400' : ($status == 'late' ? 'text-yellow-400' : 'text-red-400'); ?>">
+            <td class="statusAttendance px-3 py-2 text-xs font-bold <?php echo $status == 'Present' ? 'text-green-700' : 'text-red-600'; ?>">
                 <?php echo strtoupper($status); ?>
             </td>
-            <td class=" dateAttendance px-6 py-4 text-wrap text-xs">
-                <?php echo $row['attendatetime']; ?>
+            <td class="px-3 py-2 text-xs">
+                <?php echo $row['room'] ?? 'N/A'; ?>
+            </td>
+            <td class="dateAttendance px-3 py-2 text-wrap text-xs">
+                <?php echo $attendatetime ?? 'N/A'; ?>
             </td>
         </tr>
 
@@ -86,7 +81,5 @@ if ($result && mysqli_num_rows($result) > 0) {
     </tr>
 
 <?php
-
 }
-
 ?>

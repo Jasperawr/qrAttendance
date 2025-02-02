@@ -1,11 +1,20 @@
 let scannedData = '';
+let sendTimeout = null;
 
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
         const cleanedData = scannedData.replace(/Shift/g, '');
-        sendDataToServer(cleanedData);
-        handleScannedData(cleanedData);
-        scannedData = '';
+        showLoader();
+
+        if (sendTimeout) clearTimeout(sendTimeout); // Clear previous timeout
+
+        sendTimeout = setTimeout(() => {
+            showLoader(); // Show loader before sending
+            sendDataToServer(cleanedData);
+            handleScannedData(cleanedData);
+            scannedData = '';
+        }, 3000);
+        
     } else {
         scannedData += e.key;
     }
@@ -25,16 +34,30 @@ function sendDataToServer(data) {
     })
     .then(response => response.text())
     .then(result => {
-        if (result.trim() === "True") {
-            showAlert('Scanned successfully!', 'success');
-        } else {
+        console.log(result.trim());
+        if (result.trim() === "Error") {
             showAlert('The QR Code is scanned already or server ERROR', 'error');
+        } else {
+            showAlert(result.trim(), 'success');
         }
     })
     .catch(error => {
         console.error('Error storing data:', error);
         showAlert('An error occurred while storing data. Please try again.', 'error');
+    })
+    .finally(() => {
+        hideLoader(); // Hide loader after request
     });
+}
+
+// Show Loader
+function showLoader() {
+    document.querySelector(".loading").style.display = "flex";
+}
+
+// Hide Loader
+function hideLoader() {
+    document.querySelector(".loading").style.display = "none";
 }
 
 function searchTable(tableId, inputId) {
@@ -87,6 +110,29 @@ function setupTableFilter(filterId, tableId, columnClass) {
     });
 }
 
+function setupClassFilter(filterId, tableId, columnClass) {
+    const filterElement = document.getElementById(`${filterId}`);
+    const tableRows = document.querySelectorAll(`#${tableId} tbody tr`);
+
+    filterElement.addEventListener("change", function () {
+        const filterValue = this.value.toLowerCase();
+
+        console.log(filterElement);
+
+        tableRows.forEach((row) => {
+            const cellValue = row.querySelector(`.${columnClass}`).textContent.trim().toLowerCase();
+
+
+            if (filterValue === "all" || cellValue === filterValue) {
+                row.style.display = ""; // Show row
+            } else {
+                console.log(cellValue);
+                row.style.display = "none"; // Hide row
+            }
+        });
+    });
+}
+
 function setupDateFilter(dateInputId, tableId, columnClass) {
     const dateInputElement = document.getElementById(dateInputId);
     const tableRows = document.querySelectorAll(`#${tableId} tbody tr`);
@@ -115,6 +161,47 @@ function setupDateFilter(dateInputId, tableId, columnClass) {
         });
     });
 }
+
+function setupDateRangeFilter(startInputId, endInputId, tableId, columnClass) {
+    const startInputElement = document.getElementById(startInputId);
+    const endInputElement = document.getElementById(endInputId);
+    const tableRows = document.querySelectorAll(`#${tableId} tbody tr`);
+
+    function filterRows() {
+        const startDate = startInputElement.value; // YYYY-MM-DD
+        const endDate = endInputElement.value; // YYYY-MM-DD
+
+        tableRows.forEach((row) => {
+            const cellDateText = row.querySelector(`.${columnClass}`).textContent.trim();
+
+            // Attempt to parse the cell date
+            let cellDate;
+            try {
+                cellDate = new Date(cellDateText).toISOString().split("T")[0]; // Convert to YYYY-MM-DD
+            } catch (e) {
+                console.error("Invalid cell date:", cellDateText);
+                row.style.display = "none"; // Hide invalid rows
+                return;
+            }
+
+            // Debugging: log parsed dates
+            console.log({ startDate, endDate, cellDate });
+
+            if ((!startDate || cellDate >= startDate) && (!endDate || cellDate <= endDate)) {
+                row.style.display = ""; // Show row
+            } else {
+                row.style.display = "none"; // Hide row
+            }
+        });
+    }
+
+    startInputElement.addEventListener("change", filterRows);
+    endInputElement.addEventListener("change", filterRows);
+}
+
+
+
+
 
 
 

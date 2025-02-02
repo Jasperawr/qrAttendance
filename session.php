@@ -1,32 +1,30 @@
 <?php
-//
-  session_start();
+session_start();
 
-  if(isset($_POST['section'])) {
-    // Sanitize and set session variable
-    $selectedOption = $_POST['section'];
-    $_SESSION['section'] = $selectedOption;
-
+// Function to set session variables
+function setSessionVariable($key)
+{
+  if (isset($_POST[$key])) {
+    $_SESSION[$key] = $_POST[$key];
   }
+}
 
-  if(isset($_POST['groupnumber'])) {
-    // Sanitize and set session variable
-    $selectedOption = $_POST['groupnumber'];
-    $_SESSION['groupnumber'] = $selectedOption;
+setSessionVariable('class');
+setSessionVariable('semester');
+setSessionVariable('room');
+setSessionVariable('program');
+setSessionVariable('academic_year');
+setSessionVariable('year_level');
 
-  }
+// Prepare an associative array for session data to return as a JSON response
+$response = [
+  'class' => isset($_SESSION['class']) ? $_SESSION['class'] : '',
+  'semester' => isset($_SESSION['semester']) ? $_SESSION['semester'] : '',
+  'room' => isset($_SESSION['room']) ? $_SESSION['room'] : '',
+  'program' => isset($_SESSION['program']) ? $_SESSION['program'] : '',
+  'academic_year' => isset($_SESSION['academic_year']) ? $_SESSION['academic_year'] : '',
+  'year_level' => isset($_SESSION['year_level']) ? $_SESSION['year_level'] : ''
+];
 
-  // Check if session variable exists
-  if (isset($_SESSION['section'])) {
-    echo $_SESSION['section'];
-  } else {
-    echo '';
-  }
-
-  // Check if session variable exists
-  if (isset($_SESSION['groupnumber'])) {
-    echo $_SESSION['groupnumber'];
-  } else {
-    echo '';
-  }
-?>
+// Return the session data as a JSON response
+echo json_encode($response);

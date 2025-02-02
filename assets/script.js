@@ -260,17 +260,17 @@ function showAlert(message, type = 'success') {
   let iconPath = '';
 
   if (type === 'error') {
-    alertClass = ['text-red-800', 'bg-red-50', 'border-t-4', 'border-red-300'];
+    alertClass = ['text-red-800', 'bg-red-50', 'border-red-300'];
     buttonClass = 'bg-red-50 text-red-500 hover:bg-red-200'; // Close button styles for error
     iconPath = `<path d="M10 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm0 3a1 1 0 0 1 1 1v4a1 1 0 0 1-2 0V4a1 1 0 0 1 1-1zm0 7a1 1 0 0 1 1 1v2a1 1 0 0 1-2 0v-2a1 1 0 0 1 1-1z"/>`;
   } else if (type === 'success') {
-    alertClass = ['text-green-800', 'bg-green-50', 'border-t-4', 'border-green-300'];
+    alertClass = ['text-green-800', 'bg-green-50', 'border-green-300'];
     buttonClass = 'bg-green-50 text-green-500 hover:bg-green-200'; // Close button styles for success
     iconPath = `<path d="M9 1a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm0 3a1 1 0 0 1 1 1v4a1 1 0 0 1-2 0V4a1 1 0 0 1 1-1zm0 7a1 1 0 0 1 1 1v2a1 1 0 0 1-2 0v-2a1 1 0 0 1 1-1z"/>`;
   }
 
   // Add classes to the alertBox element
-  alertBox.classList.add('flex', 'items-center', 'p-4', 'mb-4', 'rounded-lg');
+  alertBox.classList.add('flex', 'items-center', 'px-4', 'py-2', 'mb-4', 'rounded-lg');
   alertBox.classList.add(...alertClass);  // Spread the array of classes
 
   alertBox.innerHTML = `
@@ -300,9 +300,6 @@ function showAlert(message, type = 'success') {
       alertBox.remove();
   }, 5000);
 }
-
-
-
 
 function searchTable(tableId, inputId) {
   const searchTerm = document.getElementById(inputId).value.toLowerCase();
@@ -337,5 +334,7 @@ function toggleUpdateModal(id) {
       updateModal.classList.toggle('hidden');
   }
 }
+
+
 
 

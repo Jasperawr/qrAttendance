@@ -1,20 +1,32 @@
     <?php
     session_start();
 
+    // echo print_r($_SESSION);
+
     if (!isset($_SESSION['loggedin']) && !$_SESSION['loggedin'] == "true") {
         header("Location: login.php");
         exit;
     }
 
-    $checkRoute = str_replace('/Qr_Attendance/Qr_AttendanceAndInventory_Sys/', '', $_SERVER["REQUEST_URI"]);
+    $checkRoute = str_replace('/Qr_Attendance/', '', $_SERVER["REQUEST_URI"]);
     if ($checkRoute === '' || $checkRoute === '/') {
         header("Location: home");
     }
 
+
+
     include "totals.php";
     include "connect.php";
+    include "components/loader.php";
 
+    // echo print_r($_SESSION);
 
+    $faculty_id = $_SESSION['faculty_id'];
+    $default_class = $_SESSION['class'] ?? null;
+    $default_semester = $_SESSION['semester'] ?? null;
+    $default_academic_year = $_SESSION['academic_year'] ?? null;
+    $default_room = $_SESSION['room'] ?? null;
+    $default_program = $_SESSION['program'] ?? null;
     ?>
 
     <!DOCTYPE html>
@@ -30,150 +42,429 @@
         <link rel="stylesheet" href="assets/style.css">
         <script src="assets/script.js"></script>
         <script src="src/scanner.js"></script>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
         <script>
-            function reloadTable() {
-                var table = document.getElementById('attendancetoday');
-                // alert('Table reloaded!');
-            }
+            // function reloadTable() {
+            //     var table = document.getElementById('attendancetoday');
+            //     // alert('Table reloaded!');
+            // }
 
-            function checkSessionChange() {
-                var currentSessionValueofGroup = "<?php echo isset($_SESSION['groupnumber']) ? $_SESSION['groupnumber'] : '' ?>";
-                var currentSessionValueofSection = "<?php echo isset($_SESSION['section']) ? $_SESSION['section'] : '' ?>";
+            // function checkSessionChange() {
+            //     var currentSessionValueofGroup = "<?php echo isset($_SESSION['groupnumber']) ? $_SESSION['groupnumber'] : '' ?>";
+            //     var currentSessionValueofSection = "<?php echo isset($_SESSION['section']) ? $_SESSION['section'] : '' ?>";
 
 
-                setInterval(function() {
-                    var xhr = new XMLHttpRequest();
+            //     setInterval(function() {
+            //         var xhr = new XMLHttpRequest();
 
-                    xhr.open('GET', 'session.php', true);
-                    xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+            //         xhr.open('GET', 'session.php', true);
+            //         xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
 
-                    xhr.onload = function() {
-                        if (xhr.status == 200) {
-                            var serverSessionValueforGroup = xhr.responseText.substring(2, 4);
-                            var serverSessionValueforSection = xhr.responseText.substring(0, 2);
+            //         xhr.onload = function() {
+            //             if (xhr.status == 200) {
+            //                 var serverSessionValueforGroup = xhr.responseText.substring(2, 4);
+            //                 var serverSessionValueforSection = xhr.responseText.substring(0, 2);
 
-                            if (currentSessionValueofGroup !== serverSessionValueforGroup || currentSessionValueofSection !== serverSessionValueforSection) {
-                                reloadTable();
-                                currentSessionValueofGroup = serverSessionValueforGroup;
-                                currentSessionValueofSection = serverSessionValueforSection;
-                            }
-                        } else {
-                            console.error('Error checking session.');
-                        }
-                    };
+            //                 if (currentSessionValueofGroup !== serverSessionValueforGroup || currentSessionValueofSection !== serverSessionValueforSection) {
+            //                     reloadTable();
+            //                     currentSessionValueofGroup = serverSessionValueforGroup;
+            //                     currentSessionValueofSection = serverSessionValueforSection;
+            //                 }
+            //             } else {
+            //                 console.error('Error checking session.');
+            //             }
+            //         };
 
-                    xhr.send();
-                }, 5000);
-            }
+            //         xhr.send();
+            //     }, 5000);
+            // }
 
-            document.addEventListener('DOMContentLoaded', function() {
-                checkSessionChange();
-            });
+            // document.addEventListener('DOMContentLoaded', function() {
+            //     checkSessionChange();
+            // });
         </script>
     </head>
+
+    <style>
+        .marked-date {
+            background-color: #9c2525;
+            /* Or any other styling you want */
+            color: white;
+        }
+    </style>
 
     <body>
 
         <?php include "components/topbar.php"; ?>
 
         <div class="flex justify-around h-auto font-poppins pt-[120px] bg-gray-50">
-            <div class="flex justify-center h-full w-full bg-opacity-75 px-[200px]">
+            <form action="./add.php" method="POST">
+                <div class="flex justify-center h-full w-full bg-opacity-75 px-40 pb-40">
 
-                <!-- scanned student -->
-                <div class=" flex flex-col items-center ">
-                    <div class="w-full">
+                    <!-- scanned student -->
+                    <div class=" flex flex-col items-center w-full">
+
+                        <div class="grid grid-rows-2 grid-cols-3 w-full mb-5 gap-3">
+                            <select name="class" id="class" class="cursor-pointer px-5 border border-gray-500 text-gray-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 hover:bg-gray-50 w-full py-2">
+                                <option disabled <?php echo is_null($default_class) ? 'selected' : ''; ?>>Class Section</option>
+                                <?php
+                                $ys_query = "
+                                    SELECT DISTINCT class 
+                                    FROM student 
+                                    WHERE faculty_id = '$faculty_id' 
+                                    AND class != '0' 
+                                    AND class != '' 
+                                    AND class IS NOT NULL 
+                                    ORDER BY class ASC
+                                ";
+                                $ys_result = mysqli_query($conn, $ys_query);
+                                if ($ys_result && mysqli_num_rows($ys_result) > 0) {
+                                    while ($ys_row = mysqli_fetch_assoc($ys_result)) {
+                                        $selected = ($ys_row['class'] === $default_class) ? 'selected' : '';
+                                        echo "<option value='" . htmlspecialchars($ys_row['class']) . "' $selected>" . htmlspecialchars($ys_row['class']) . "</option>";
+                                    }
+                                }
+                                ?>
+                            </select>
+
+                            <!-- Semester Dropdown -->
+                            <select id="semester" name="semester" class="cursor-pointer px-5 border border-gray-500 text-gray-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 hover:bg-gray-50 w-full py-2">
+                                <option disabled <?php echo is_null($default_semester) ? 'selected' : ''; ?>>Select Semester</option>
+                                <option value="1st semester" <?php echo $default_semester === '1st semester' ? 'selected' : ''; ?>>1st Semester</option>
+                                <option value="2nd semester" <?php echo $default_semester === '2nd semester' ? 'selected' : ''; ?>>2nd Semester</option>
+                                <option value="summer" <?php echo $default_semester === 'summer' ? 'selected' : ''; ?>>Summer</option>
+                            </select>
+
+                            <!-- Academic Year Dropdown -->
+                            <select name="academic_year" id="academic_year" class="cursor-pointer px-5 border border-gray-500 text-gray-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 hover:bg-gray-50 w-full py-2">
+                                <option disabled <?php echo is_null($default_academic_year) ? 'selected' : ''; ?>>Academic Year</option>
+                                <?php
+                                $ys_query = "
+                                    SELECT DISTINCT academic_year 
+                                    FROM student 
+                                    WHERE faculty_id = '$faculty_id' 
+                                    AND academic_year != '0' 
+                                    AND academic_year != '' 
+                                    AND academic_year IS NOT NULL 
+                                    ORDER BY academic_year ASC
+                                ";
+                                $ys_result = mysqli_query($conn, $ys_query);
+                                if ($ys_result && mysqli_num_rows($ys_result) > 0) {
+                                    while ($ys_row = mysqli_fetch_assoc($ys_result)) {
+                                        $selected = ($ys_row['academic_year'] === $default_academic_year) ? 'selected' : '';
+                                        echo "<option value='" . htmlspecialchars($ys_row['academic_year']) . "' $selected>" . htmlspecialchars($ys_row['academic_year']) . "</option>";
+                                    }
+                                }
+                                ?>
+                            </select>
+
+                            <!-- Room Dropdown -->
+                            <select id="room" name="room" class="cursor-pointer px-5 border border-gray-500 text-gray-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 hover:bg-gray-50 w-full py-2">
+                                <option disabled <?php echo is_null($default_room) ? 'selected' : ''; ?>>Select Room</option>
+                                <option value="101" <?php echo $default_room === '101' ? 'selected' : ''; ?>>Room 101</option>
+                                <option value="102" <?php echo $default_room === '102' ? 'selected' : ''; ?>>Room 102</option>
+                                <option value="103" <?php echo $default_room === '103' ? 'selected' : ''; ?>>Room 103</option>
+                                <option value="201" <?php echo $default_room === '201' ? 'selected' : ''; ?>>Room 201</option>
+                                <option value="202" <?php echo $default_room === '202' ? 'selected' : ''; ?>>Room 202</option>
+                                <option value="203" <?php echo $default_room === '203' ? 'selected' : ''; ?>>Room 203</option>
+                            </select>
+
+                            <!-- Program Dropdown -->
+                            <select name="program" id="program" class="col-span-2 cursor-pointer px-5 border border-gray-500 text-gray-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 hover:bg-gray-50 w-full py-2">
+                                <option disabled <?php echo is_null($default_program) ? 'selected' : ''; ?>>Program</option>
+                                <?php
+                                $gn_query = "
+                                    SELECT DISTINCT student.class, program.program_name, program.id 
+                                    FROM student 
+                                    LEFT JOIN program ON student.program = program.id 
+                                    WHERE student.faculty_id = '$faculty_id' 
+                                    AND student.program != '0' AND student.program != ''    
+                                    ORDER BY student.program ASC
+                                ";
+                                $gn_result = mysqli_query($conn, $gn_query);
+                                if ($gn_result && mysqli_num_rows($gn_result) > 0) {
+                                    while ($gn_row = mysqli_fetch_assoc($gn_result)) {
+                                        $selected = ($gn_row['id'] === $default_program) ? 'selected' : '';
+                                        echo "<option value='" . htmlspecialchars($gn_row['id']) . "' $selected>" . htmlspecialchars($gn_row['program_name']) . "</option>";
+                                    }
+                                }
+                                ?>
+                            </select>
+
+                        </div>
+
+                        <!-- <div class="w-full">
+                            <p class="rounded-lg w-full text-gray-700 py-3 px-4 bg-white shadow-md shadow-gray-200 text-nowrap">
+                                <span class="font-medium text-green-500">Success!</span>
+                                Student QR Code Scan completed!
+                            </p>
+                        </div> -->
+
+                        <div class="flex gap-5 my-5">
+                            <?php include "scannedStudent.php"; ?>
+                            <div class="flex flex-col items-center">
+                                <div class="flex justify-evenly w-full">
+                                    <span class="tracking-wide text-[20px] ">C</span>
+                                    <span class="tracking-wide text-[20px] ">A</span>
+                                    <span class="tracking-wide text-[20px] ">L</span>
+                                    <span class="tracking-wide text-[20px] ">E</span>
+                                    <span class="tracking-wide text-[20px] ">N</span>
+                                    <span class="tracking-wide text-[20px] ">D</span>
+                                    <span class="tracking-wide text-[20px] ">A</span>
+                                    <span class="tracking-wide text-[20px] ">R</span>
+                                </div>
+                                <div id="datepicker"></div>
+                            </div>
+                        </div>
+
                         <p class="rounded-lg w-full text-gray-700 py-3 px-4 bg-white shadow-md shadow-gray-200 text-nowrap">
-                            <span class="font-medium text-green-500">Success!</span>
-                            Student QR Code Scan completed!
+                            <span class="font-medium text-yellow-500">Attention!</span>
+                            Scanned QR Code information will show here.
                         </p>
                     </div>
 
-                    <?php include "scannedStudent.php"; ?>
+                    <!-- line between -->
+                    <div class="border border-gray-500 border-opacity-50 content-none h-[600px] mx-5"></div>
 
-                    <p class="rounded-lg w-full text-gray-700 py-3 px-4 bg-white shadow-md shadow-gray-200 text-nowrap">
-                        <span class="font-medium text-yellow-500">Attention!</span>
-                        Scanned QR Code information will show here.
-                    </p>
-                </div>
+                    <!-- read -->
+                    <div class="`flex flex-col gap-9 h-full w-full">
 
-                <!-- line between -->
-                <div class="border-2 border-gray-500 border-opacity-50 content-none h-[600px] mx-10"></div>
-
-                <!-- read -->
-                <div class="`flex flex-col gap-9 h-full w-full">
-
-                    <div class="grid grid-cols-3 w-full gap-9 mb-7">
-
-                        <div class="p-6  bg-white rounded-lg flex justify-between shadow-md shadow-gray-200">
-                            <div class="flex flex-col justify-between align-center">
-                                <p class="font-bold text-[35px] tracking-wide font-outfit text-gray-950 mb-5"><?php echo totalStudentToday($conn); ?></p>
-                                <p class="font-bold text-[16px] tracking-wide text-gray-950 text-nowrap">Total Students</p>
+                        <div class="grid grid-flow-col gap-5 justify-arround items-center mb-7">
+                            <div class="grid grid-row-3 w-full gap-3 ">
+                                <div class="py-3 px-4  bg-white rounded-lg flex items-center justify-between shadow-md shadow-gray-200 gap-2">
+                                    <p class="font-bold text-sm tracking-wide text-gray-950 text-nowrap">Total Students</p>
+                                    <p class=" text-[20px] tracking-wide font-outfit text-gray-950"><?php echo totalStudentToday($conn); ?></p>
+                                </div>
+                                <div class="py-3 px-4  bg-white rounded-lg flex items-center justify-between shadow-md shadow-gray-200 gap-2">
+                                    <p class="font-bold text-sm tracking-wide text-gray-950">Present</p>
+                                    <p class=" text-[20px] tracking-wide font-outfit text-gray-950"><?php echo presentToday($conn); ?></p>
+                                </div>
+                                <div class="py-3 px-4  bg-white rounded-lg flex items-center justify-between shadow-md shadow-gray-200 gap-2">
+                                    <p class="font-bold text-sm tracking-wide text-gray-950">Absent</p>
+                                    <p class=" text-[20px] tracking-wide font-outfit text-gray-950"><?php echo absentToday($conn); ?></p>
+                                </div>
                             </div>
-                            <svg class="ml-8 mt-2 text-red-600" xmlns="http://www.w3.org/2000/svg" width="1.5em" height="1.5em" viewBox="0 0 16 16">
-                                <path fill="currentColor" d="M15 14s1 0 1-1s-1-4-5-4s-5 3-5 4s1 1 1 1zm-7.978-1L7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276c.593.69.758 1.457.76 1.72l-.008.002l-.014.002zM11 7a2 2 0 1 0 0-4a2 2 0 0 0 0 4m3-2a3 3 0 1 1-6 0a3 3 0 0 1 6 0M6.936 9.28a6 6 0 0 0-1.23-.247A7 7 0 0 0 5 9c-4 0-5 3-5 4q0 1 1 1h4.216A2.24 2.24 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904c.243-.294.526-.569.846-.816M4.92 10A5.5 5.5 0 0 0 4 13H1c0-.26.164-1.03.76-1.724c.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0a3 3 0 0 1-6 0m3-2a2 2 0 1 0 0 4a2 2 0 0 0 0-4" />
-                            </svg>
-                        </div>
-                        <div class="p-6  bg-white rounded-lg flex justify-between shadow-md shadow-gray-200">
-                            <div class="flex flex-col justify-between align-center">
-                                <p class="font-bold text-[35px] tracking-wide font-outfit text-gray-950 mb-5"><?php echo presentToday($conn); ?></p>
-                                <p class="font-bold text-[16px] tracking-wide text-gray-950">Present</p>
-                            </div>
-                            <svg class="ml-8 mt-2 text-red-600" xmlns="http://www.w3.org/2000/svg" width="1.5em" height="1.5em" viewBox="0 0 24 24">
-                                <path fill="currentColor" d="M21 21V5H3v8H1V5q0-.825.588-1.412T3 3h18q.825 0 1.413.588T23 5v14q0 .825-.587 1.413T21 21M9 14q-1.65 0-2.825-1.175T5 10t1.175-2.825T9 6t2.825 1.175T13 10t-1.175 2.825T9 14m0-2q.825 0 1.413-.587T11 10t-.587-1.412T9 8t-1.412.588T7 10t.588 1.413T9 12M1 22v-2.8q0-.85.438-1.562T2.6 16.55q1.55-.775 3.15-1.162T9 15t3.25.388t3.15 1.162q.725.375 1.163 1.088T17 19.2V22zm2-2h12v-.8q0-.275-.137-.5t-.363-.35q-1.35-.675-2.725-1.012T9 17t-2.775.338T3.5 18.35q-.225.125-.363.35T3 19.2zm6 0" />
-                            </svg>
-                        </div>
-                        <div class="p-6  bg-white rounded-lg flex justify-between shadow-md shadow-gray-200">
-                            <div class="flex flex-col justify-between align-center">
-                                <p class="font-bold text-[35px] tracking-wide font-outfit text-gray-950 mb-5"><?php echo absentToday($conn); ?></p>
-                                <p class="font-bold text-[16px] tracking-wide text-gray-950">Absent</p>
-                            </div>
-                            <svg class="ml-8 mt-2 text-red-600" xmlns="http://www.w3.org/2000/svg" width="1.5em" height="1.5em" viewBox="0 0 24 24">
-                                <path fill="currentColor" d="M23 15.5c0-.71-.16-1.36-.45-1.96a7 7 0 0 0-3.69-3.92a6.55 6.55 0 0 0-1.9-3.58C15.6 4.68 13.95 4 12 4c-1.58 0-3 .47-4.25 1.43s-2.08 2.19-2.5 3.72c-1.25.28-2.29.93-3.08 1.95S1 13.28 1 14.58c0 1.51.54 2.8 1.61 3.85C3.69 19.5 5 20 6.5 20h3.76c1.27 1.81 3.36 3 5.74 3c3.87 0 7-3.13 7-7zM6.5 18c-.97 0-1.79-.34-2.47-1C3.34 16.29 3 15.47 3 14.5s.34-1.79 1.03-2.47C4.71 11.34 5.53 11 6.5 11H7c0-1.38.5-2.56 1.46-3.54C9.44 6.5 10.62 6 12 6s2.56.5 3.54 1.46c.46.47.81 1 1.05 1.57C16.4 9 16.2 9 16 9c-3.87 0-7 3.13-7 7c0 .7.11 1.37.29 2zm9.5 3c-2.76 0-5-2.24-5-5s2.24-5 5-5s5 2.24 5 5s-2.24 5-5 5m.5-4.75l2.86 1.69l-.75 1.22L15 17v-5h1.5z" />
-                            </svg>
-                        </div>
-                    </div>
 
-                    <div class="relative overflow-x-auto shadow-md shadow-gray-200 rounded-lg w-full">
-                        <table class="w-full text-sm text-left text-gray-500" id="attendancetoday">
-                            <caption class="relative p-5 text-lg font-semibold text-left text-gray-900 bg-white">
-                                Attendance Today
-                                <a class="absolute right-3 text-[12px] font-medium text-gray-800 hover:drop-shadow-md hover:drop-shadow-gray-900" href="attendanceoverview">View All ></a>
-                            </caption>
+                            <!-- Button for marking all selected student as absent -->
+                            <button type="submit" name="markAbsent" class="flex flex-col items-center bg-white w-full h-full items-center justify-center shadow-md rounded-lg shadow-gray-400 hover:shadow-red-400 hover:bg-red-50 transition-all duration-200 text-red-700">
+                                <span class="text-[40px]" id="markedStudent">0</span>
+                                <span class=""> Mark Student as Absent</span>
+                                <span class="text-gray-500 text-xs px-4">Use this to mark the selected or pending student as absent</span>
+                            </button>
+                        </div>
 
-                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                                <tr>
-                                    <th scope="col" class="px-6 py-3">
-                                        Student Name
-                                    </th>
-                                    <th scope="col" class="px-6 py-3">
-                                        ID Number
-                                    </th>
-                                    <th scope="col" class="px-6 py-3">
-                                        Section
-                                    </th>
-                                    <th scope="col" class="px-6 py-3">
-                                        Group
-                                    </th>
-                                    <th scope="col" class="px-6 py-3">
-                                        Status
-                                    </th>
-                                    <th scope="col" class="px-6 py-3">
-                                        Date
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php include "./attendanceToday.php"; ?>
-                            </tbody>
-                        </table>
+                        <div class="relative overflow-x-auto shadow-md shadow-gray-200 rounded-lg w-full">
+                            <table class="w-full text-sm text-left text-gray-500" id="attendancetoday">
+                                <caption class="relative p-5 text-md font-semibold text-left text-gray-900 bg-white">
+                                    Attendance Today
+                                    <a class="absolute right-3 text-[10px] font-medium text-gray-800 hover:drop-shadow-md hover:drop-shadow-gray-900" href="attendanceoverview">View All ></a>
+                                </caption>
+
+                                <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-2 text-center">
+                                            <div class="flex items-center space-x-1">
+                                                <input
+                                                    type="checkbox"
+                                                    id="checkabsentAll"
+                                                    class="w-4 h-4 text-red-500 bg-gray-100 border-gray-300 rounded focus:ring-red-400 focus:ring-2" />
+                                                <label for="checkabsentAll" class="">All</label>
+                                            </div>
+                                        </th>
+                                        <th scope="col" class="px-2 py-2 text-[10px]">
+                                            Student Name
+                                        </th>
+                                        <th scope="col" class="px-2 py-2 text-[10px]">
+                                            ID Number
+                                        </th>
+                                        <th scope="col" class="px-2 py-2 text-[10px]">
+                                            Section
+                                        </th>
+                                        <th scope="col" class="px-2 py-2 text-[10px]">
+                                            Semester
+                                        </th>
+                                        <th scope="col" class="px-2 py-2 text-[10px]">
+                                            Status
+                                        </th>
+                                        <th scope="col" class="px-2 py-2 text-[10px]">
+                                            Date
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php include "./attendanceToday.php"; ?>
+                                </tbody>
+                            </table>
+                        </div>
+
                     </div>
 
                 </div>
-
-            </div>
+            </form>
         </div>
 
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
+        <script>
+            function updateTable() {
+                var section = document.getElementById('section').value;
+                var program = document.getElementById('program').value;
+
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', 'attendanceToday.php?section=' + section + '&program=' + program, true);
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        document.getElementById('attendanceTable').innerHTML = xhr.responseText;
+                    }
+                };
+                xhr.send();
+            }
+
+            function updateSession(selectedElementId, newValue) {
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', 'session.php', true);
+                xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+                xhr.send(selectedElementId + '=' + encodeURIComponent(newValue));
+
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        console.log('Session variable set successfully for ' + selectedElementId);
+                        console.log(xhr.responseText);
+                    } else {
+                        console.error('Error setting session variable.');
+                    }
+                };
+            }
+
+            function reloadTable() {
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', 'attendanceLogs.php', true);
+
+                // Correctly handle the load event to ensure the request is completed
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        console.log('Table reloaded successfully');
+                        // console.log(xhr.responseText); // Debug: View the response from the server
+                        // Optionally, update the table content dynamically
+                        // document.getElementById('tableContainer').innerHTML = xhr.responseText;
+                    } else {
+                        console.error('Error reloading the table.');
+                    }
+                };
+
+                xhr.onerror = function() {
+                    console.error('Network error occurred while reloading the table.');
+                };
+
+                xhr.send();
+            }
+
+            // Dropdown elements
+            var selectedClass = document.getElementById('class');
+            var selectedSemester = document.getElementById('semester');
+            var selectedRoom = document.getElementById('room');
+            var selectedProgram = document.getElementById('program');
+            var selectedAcadYear = document.getElementById('academic_year');
+            var selectedYearLvl = document.getElementById('year_level');
+
+            // Add change event listeners for dropdowns
+            selectedClass.addEventListener('change', function() {
+                var selectedOption = selectedClass.value;
+                updateSession('class', selectedOption);
+                reloadTable();
+            });
+
+            selectedSemester.addEventListener('change', function() {
+                var selectedOption = selectedSemester.value;
+                updateSession('semester', selectedOption);
+                reloadTable();
+            });
+
+            selectedRoom.addEventListener('change', function() {
+                var selectedOption = selectedRoom.value;
+                updateSession('room', selectedOption);
+                reloadTable();
+            });
+
+            selectedProgram.addEventListener('change', function() {
+                var selectedOption = selectedProgram.value;
+                updateSession('program', selectedOption);
+                reloadTable();
+            });
+
+            selectedAcadYear.addEventListener('change', function() {
+                var selectedOption = selectedAcadYear.value;
+                updateSession('academic_year', selectedOption);
+                reloadTable();
+            });
+
+            // selectedYearLvl.addEventListener('change', function() {
+            //     var selectedOption = selectedYearLvl.value;
+            //     updateSession('year_level', selectedOption);
+            //     reloadTable();
+            // });
+
+            // For checkbox
+            const checkedboxLength = document.getElementById('markedStudent');
+            const checkboxesAll = document.getElementById('checkabsentAll');
+            const checkboxes = document.querySelectorAll('.checkabsent');
+
+            // Count checked checkboxes
+            function updateCheckboxCount() {
+                const checkedCount = document.querySelectorAll('.checkabsent:checked').length;
+                checkedboxLength.textContent = `${checkedCount}`;
+            }
+
+            // Select/Deselect all checkboxes
+            checkboxesAll.addEventListener('change', function() {
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = this.checked;
+                });
+                updateCheckboxCount();
+            });
+
+            // Update count whenever individual checkbox changes
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', updateCheckboxCount);
+            });
+
+            updateCheckboxCount();
+
+            flatpickr("#datepicker", {
+                inline: true,
+                dateFormat: "Y-m-d",
+                onDayCreate: function(dObj, dStr, fp, dayElem) {
+                    fetch('dates.php') // Ensure this path is correct for your file
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Network response was not ok');
+                            }
+                            return response.json();
+                        })
+                        .then(dates => {
+                            if (Array.isArray(dates)) {
+                                const localDate = new Date(dayElem.dateObj);
+                                // Convert the date to Philippine Standard Time (GMT+8)
+                                const dateString = localDate.toLocaleDateString('en-CA', {
+                                    timeZone: 'Asia/Manila'
+                                }); // Formats as "YYYY-MM-DD"
+
+                                // Check if the current day is in the list of fetched dates
+                                if (dates.includes(dateString)) {
+                                    dayElem.classList.add("marked-date"); // Add a custom class to style it
+                                }
+                            } else {
+                                console.warn('Expected an array of dates');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error fetching dates:', error);
+                        });
+                }
+            });
+        </script>
     </body>
 
     </html>

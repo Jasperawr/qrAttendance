@@ -2,106 +2,109 @@
 
 include "connect.php";
 
-$section = $_SESSION['section'];
-$group_no = $_SESSION['groupnumber'];
+// echo print_r($_SESSION);
+
+$class = isset($_SESSION['class']) ? $_SESSION['class'] : null;
+$program = isset($_SESSION['program']) ? $_SESSION['program'] : null;
+$semester = isset($_SESSION['semester']) ? $_SESSION['semester'] : null;
+// $year_level = isset($_SESSION['year_level']) ? $_SESSION['year_level'] : null;
+$academic_year = isset($_SESSION['academic_year']) ? $_SESSION['academic_year'] : null;
+$room = isset($_SESSION['room']) ? $_SESSION['room'] : null;
 $faculty_id = isset($_SESSION['faculty_id']) ? $_SESSION['faculty_id'] : null;
 
-if (!isset($_SESSION['section']) && !isset($_SESSION['groupnumber'])) {
-?>
+// echo print_r($_SESSION);
 
-    <tr class="w-full">
-        <td colSpan="6" class=" w-full text-center bg-white py-4">
-            No Data Available.
-        </td>
-    </tr>
-
-    <?php
-
-}
-
+// If section and group number are provided, fetch the data
 $query = "
     SELECT 
-        a.*, 
-        s.name, 
-        s.email, 
-        s.student_number, 
-        s.avatar
+        student.*, 
+        attendance_log.status AS attendance_status
     FROM 
-        attendance_log a
-    INNER JOIN 
-        student s
-    ON 
-        a.user_id = s.user_id
+        student
+    LEFT JOIN 
+        attendance_log ON student.user_id = attendance_log.user_id 
+        AND DATE(attendance_log.attendatetime) = CURDATE() 
+        AND (attendance_log.status = 'Present' OR attendance_log.status = 'Absent')
+        AND attendance_log.room = '$room'
+        AND attendance_log.faculty_id = '$faculty_id' 
+        AND attendance_log.class = '$class' 
+        AND attendance_log.semester = '$semester' 
+        AND attendance_log.program = '$program' 
+        AND attendance_log.academic_year = '$academic_year'
     WHERE 
-        a.yr_sec = '$section' AND 
-        a.group_no = '$group_no' AND
-        s.faculty_id = '$faculty_id' AND
-        DATE(a.attendatetime) = CURDATE()
+        student.faculty_id = '$faculty_id' 
+        AND student.class = '$class' 
+        AND student.semester = '$semester' 
+        AND student.program = '$program' 
+        AND student.academic_year = '$academic_year'
+        OR attendance_log.room = '$room'
 ";
 
 $result = mysqli_query($conn, $query);
 
-if ($result && mysqli_num_rows($result) > 0) {
-    while ($row = mysqli_fetch_assoc($result)) {
-        $user_id = $row['user_id'];
-        $status = $row['status']; // status is from the attendance_log
-        $attendatetime = $row['attendatetime'];
+if ($result) {
 
-        $yearAndSec = "";
-        $y_q = "SELECT * from yr_sec LEFT JOIN attendance_log ON yr_sec.id = attendance_log.yr_sec where attendance_log.yr_sec = $section LIMIT 1";
-        $y_r = mysqli_query($conn, $y_q);
-        if (mysqli_num_rows($y_r) > 0) {
-            $y_row = mysqli_fetch_assoc($y_r);
-            $yearAndSec = $y_row['year_and_sec'];
+    if (mysqli_num_rows($result) > 0) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $user_id = $row['user_id'];
+
+?>
+
+            <tr class="bg-white border-b">
+                <td class="text-center">
+                    <input
+                        type="checkbox"
+                        id="checkabsent<?php echo $row['id']; ?>"
+                        name="mark_ids[]"
+                        value="<?php echo $row['user_id']; ?>"
+                        class="checkabsent w-4 h-4 text-red-500 bg-gray-100 border-gray-300 rounded focus:ring-red-400 focus:ring-2" />
+                </td>
+                <td scope="row" class="px-2 py-2 text-gray-900 whitespace-nowrap">
+                    <div class="flex items-center overflow-x-auto scrollbar-hide">
+                        <img class="w-10 h-10 rounded-full flex-shrink-0" src="<?php echo  $row['avatar'] ? "data:image/jpeg;base64, " . base64_encode($row['avatar']) : "https://ui-avatars.com/api/?name=" . $row['name'] . "&background=random"; ?>" alt="Jese image">
+                        <div class="ps-3 flex-shrink-0">
+                            <div class="text-base font-semibold text-xs"><?php echo ucwords($row['name']); ?></div>
+                            <div class="font-normal text-gray-500 text-xs"><?php echo $row['email']; ?></div>
+                        </div>
+                    </div>
+                </td>
+
+                <td class="px-2 py-2 text-xs">
+                    <?php echo $row['student_number']; ?>
+                </td>
+                <td class="px-2 py-2 text-center text-xs">
+                    <?php echo $row['class']; ?>
+                </td>
+                <td class="px-2 py-2 text-center text-xs">
+                    <?php echo ucwords($row['semester']); ?>
+                </td>
+                <td class="px-2 py-2 font-bold text-xs <?php echo $row['attendance_status'] === 'Present' ? 'text-green-700' : ($row['attendance_status'] === 'Absent' ? 'text-red-500' : 'text-yellow-500'); ?>">
+                    <?php echo $row['attendance_status'] ? strtoupper($row['attendance_status']) : 'Pending'; ?>
+                </td>
+                <td class="px-2 py-2 text-center text-xs">
+                    <?php echo $row['modified_attendatetime'] ? $row['modified_attendatetime'] : $row['attendatetime']; ?>
+                </td>
+
+            </tr>
+
+        <?php
         }
-
-        $groupNo = "";
-        $gn_q = "SELECT * from group_no LEFT JOIN attendance_log ON group_no.id = attendance_log.group_no where attendance_log.group_no = $group_no LIMIT 1";
-        $gn_r = mysqli_query($conn, $gn_q);
-        if (mysqli_num_rows($gn_r) > 0) {
-            $gn_row = mysqli_fetch_assoc($gn_r);
-            $groupNo = $gn_row['group_number'];
-        }
-    ?>
-
-        <tr class="bg-white border-b ">
-            <th scope="row" class="flex items-center px-6 py-4 text-gray-900 whitespace-nowrap">
-                <img class="w-10 h-10 rounded-full" src="data:image/jpeg;base64,<?php echo base64_encode($row['avatar']); ?>" alt="Student Avatar">
-                <div class="ps-3">
-                    <div class="text-base font-semibold"><?php echo ucwords($row['name']); ?></div>
-                    <div class="font-normal text-gray-500"><?php echo $row['email']; ?></div>
-                </div>
-            </th>
-            <td class="px-6 py-4 text-xs">
-                <?php echo $row['student_number']; ?>
-            </td>
-            <td class="px-6 py-4 text-center">
-                <?php echo strtoupper($yearAndSec); ?>
-            </td>
-            <td class="px-6 py-4 text-center">
-                <?php echo strtoupper($groupNo); ?>
-            </td>
-            <td class="px-6 py-4 font-bold <?php echo $status == 'present' ? 'text-green-400' : ($status == 'late' ? 'text-yellow-400' : 'text-red-400'); ?>">
-                <?php echo strtoupper($status); ?>
-            </td>
-            <td class="px-6 py-4 text-wrap text-xs">
-                <?php echo $row['attendatetime']; ?>
+    } else {
+        ?>
+        <tr class="w-full">
+            <td colSpan="6" class="w-full text-center bg-white py-4">
+                No Data Available.
             </td>
         </tr>
-
     <?php
     }
 } else {
     ?>
-
     <tr class="w-full">
-        <td colSpan="6" class=" w-full text-center bg-white py-4">
+        <td colSpan="6" class="w-full text-center bg-white py-4">
             No Data Available.
         </td>
     </tr>
-
 <?php
-
 }
-
 ?>

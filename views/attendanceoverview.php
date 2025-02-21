@@ -1,5 +1,4 @@
     <?php
-    session_start();
 
     if (!isset($_SESSION['loggedin']) && !$_SESSION['loggedin'] == "true") {
         header("Location: login.php");
@@ -292,7 +291,6 @@
 
                 <div class=" w-full flex flex-col gap-4 ">
                     <select id="monthSelect" class="p-2 bg-white rounded-md">
-
                     </select>
                     <div class="flex gap-4">
                         <div class="flex flex-col items-center">
@@ -532,15 +530,15 @@
             // Event listener for when the page is loaded to populate the dropdown and create chart
             document.addEventListener('DOMContentLoaded', function() {
                 fetchRoomUsageData().then((roomData) => {
-                    const months = roomData.months; // Get the months array
-                    const roomDataForChart = roomData.roomData; // Get the room data array
+                    const months = roomData.months; 
+                    const roomDataForChart = roomData.roomData; 
 
                     // Populate the dropdown with available months
                     populateMonthDropdown(months);
 
                     // Handle the initial chart rendering (using the first available month, e.g., the most recent one)
-                    const selectedMonth = months[0]; // Default to first month
-                    const selectedMonthData = roomDataForChart.filter(item => item.month === selectedMonth); // Filter by selected month
+                    const selectedMonth = months[0]; 
+                    const selectedMonthData = roomDataForChart.filter(item => item.month === selectedMonth);
 
                     // Pass the filtered data to the createBarChart function
                     createBarChart(selectedMonthData);

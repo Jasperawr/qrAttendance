@@ -31,8 +31,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $name = ucwords($tempname);
         $student_number = $_POST['idnumber'];
         $email = $_POST['email'];
-        $section = $_POST['section'];
-        $groupnumber = $_POST['groupnumber'];
 
         $year_level = $_POST['year_level'];
         $semester = $_POST['semester'];
@@ -163,8 +161,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 echo "Error: " . mysqli_error($conn);
             }
         }
-    } else if (isset($_POST['uploadExcel'])) {
-        // Handle Excel or CSV upload
+    }
+
+    else if (isset($_POST['uploadExcel'])) {
         if (isset($_FILES['excelFile'])) {
             $fileName = $_FILES['excelFile']['tmp_name'];
             $facultyId = $_SESSION['faculty_id'];
@@ -179,31 +178,65 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $fullNames = $_POST['full_name'] ?? [];
             $emails = $_POST['email'] ?? [];
 
-            for ($i = 0; $i < count($studentNos); $i++) {
+            $totalStudents = count($studentNos);
+            if ($totalStudents === 0) {
+                echo json_encode(["error" => "No students found."]);
+                exit;
+            }
+
+            // Set response as stream
+            header('Content-Type: text/event-stream');
+            header('Cache-Control: no-cache');
+            header('Connection: keep-alive');
+            ob_implicit_flush(true);
+            ob_end_flush();
+
+            $recipients = [];
+
+            // Process students and collect recipients
+            for ($i = 0; $i < $totalStudents; $i++) {
                 $studentNo = $conn->real_escape_string($studentNos[$i]);
                 $fullName = $conn->real_escape_string($fullNames[$i]);
                 $email = $conn->real_escape_string($emails[$i]);
 
-                // Skip empty rows
                 if (empty($studentNo) || empty($fullName) || empty($email)) {
                     continue;
                 }
 
                 $origid = uniqid();
                 $sql = "INSERT INTO `student` (user_id, name, student_number, email, class, semester, year_level, academic_year, program, faculty_id, datetime)
-                                VALUES ('$origid', '$fullName', '$studentNo', '$email', '$class', '$semester', '$year_level', '$academic_year', '$program', '$facultyId', NOW())";
+                        VALUES ('$origid', '$fullName', '$studentNo', '$email', '$class', '$semester', '$year_level', '$academic_year', '$program', '$facultyId', NOW())";
 
                 if (!mysqli_query($conn, $sql)) {
-
-                    sendMail($email, $origid, $fullName);
-                    echo "Error inserting student: " . mysqli_error($conn) . "<br>";
+                    echo "data: error: " . mysqli_error($conn) . "\n\n";
+                    flush();
+                    exit;
                 }
+
+                $recipients[] = [
+                    'email' => $email, // Change if needed
+                    'name' => $fullName,
+                    'hashedid' => $origid
+                ];
+
+                $progress = round(($i + 1) / ($totalStudents * 2) * 100);
+                echo "data: " . $progress . "|Processing Students: " . ($i + 1) . "/" . $totalStudents . "\n\n";
+                flush();
             }
+
+            if (!empty($recipients)) {
+                sendBulkEmails($recipients, $totalStudents);
+            }
+
+            echo "data: 100|Complete! All Students Processed & Emails Sent.\n\n";
+            flush();
+            exit;
         } else {
-            echo "No file uploaded.";
+            echo json_encode(["error" => "No file uploaded."]);
         }
     }
-    if (isset($_POST['markAbsent'])) {
+    
+    else if (isset($_POST['markAbsent'])) {
         date_default_timezone_set('Asia/Manila');
         $currentDateTime = date('Y-m-d H:i:s');
         $faculty_id = isset($_SESSION['faculty_id']) ? $_SESSION['faculty_id'] : null;

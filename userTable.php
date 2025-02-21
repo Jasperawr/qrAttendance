@@ -87,7 +87,7 @@ if ($result && mysqli_num_rows($result) > 0) {
 
                             <div id="userPassword<?php echo $row['id']; ?>" class="w-full">
                                 <label for="password<?php echo $row['id']; ?>" class="tracking-wide block mb-1 text-[11px] text-gray-900 uppercase font-bold">User Password</label>
-                                <input type="password" value="<?php echo $row['student_number']; ?>" class="w-full border border-gray-300 text-gray-900 text-sm rounded focus:ring-blue-500 focus:border-blue-500 block p-2.5 outline-none placeholder:tracking-wide"
+                                <input type="password"  class="w-full border border-gray-300 text-gray-900 text-sm rounded focus:ring-blue-500 focus:border-blue-500 block p-2.5 outline-none placeholder:tracking-wide"
                                     name="password" id="password<?php echo $row['id']; ?>" placeholder="**********">
                                 <p class="opacity-0 mb-0.25 px-2 text-[11px] text-red-600 "><span class="font-medium">Oops!</span> Credential is wrong!</p>
                             </div>
@@ -97,7 +97,7 @@ if ($result && mysqli_num_rows($result) > 0) {
 
 
                         <div class="flex items-center gap-2">
-                            <button type="submit" name="updateUser"
+                            <button type="submit" name="updateAdminUser"
                                 class="text-white bg-blue-500 hover:bg-blue-600 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 focus:outline-none ">
                                 Save Changes</button>
                         </div>

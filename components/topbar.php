@@ -105,7 +105,7 @@ include "./connect.php";
 <!-- For route name and display -->
 <script>
   const route = window.location.pathname;
-  var routeName = route.replace('/qrAttendance/', '');
+  var routeName = route.replace('/', '');
 
   function upperInitial(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);

@@ -84,16 +84,16 @@ if (($_SESSION['role'] === "Admin" || $_SESSION['role'] === "Faculty") && isset(
 
 // This is for deleting student selected
 if (($_SESSION['role'] === "Admin" || $_SESSION['role'] === "Faculty") && isset($_POST['deleteAllSelected'])) {
-    $delete_ids = $_POST['delete_ids'] ?? []; // Get the selected IDs
+    $delete_ids = isset($_POST['delete_ids']) ? explode(',', $_POST['delete_ids']) : [];
 
     if (!empty($delete_ids)) {
-        // Convert array to a comma-separated string for SQL (ensuring only integers are used)
+        // Convert array to a comma-separated string while ensuring only integers are used
         $ids = implode(',', array_map('intval', $delete_ids));
 
         // Delete query
         $query = "DELETE FROM student WHERE id IN ($ids)";
         if (mysqli_query($conn, $query)) {
-            header('Location: students');
+            header('Location: students.php'); // Ensure it redirects properly
             exit;
         } else {
             echo "Error deleting records: " . mysqli_error($conn);
@@ -102,3 +102,4 @@ if (($_SESSION['role'] === "Admin" || $_SESSION['role'] === "Faculty") && isset(
         echo "No records selected.";
     }
 }
+

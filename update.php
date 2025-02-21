@@ -1,5 +1,6 @@
 <?php
 include "connect.php";
+include "sendmail.php";
 
 if (isset($_GET['unique_id']) && isset($_GET['quantity'])) {
     $unique_id = mysqli_real_escape_string($conn, $_GET['unique_id']);
@@ -24,9 +25,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $name = ucwords(trim($_POST['name']));
         $student_number = trim($_POST['idnumber']);
         $email = trim($_POST['email']);
-        $section = trim($_POST['section']);
-        $groupnumber = trim($_POST['groupnumber']);
-        $student_id = intval($_POST['student_id']); // Convert to integer for safety
+        $student_id = intval($_POST['student_id']);
+
+        $class = trim($_POST['class']);
+        $program = trim($_POST['program']);
+        $academic_year = trim($_POST['academic_year']);
+        $year_level = trim($_POST['year_level']);
+        $semester = trim($_POST['semester']);
+
 
         // Check for empty fields
         if (empty($name) || empty($student_number) || empty($email)) {
@@ -65,8 +71,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 SET name = '$name', 
                     email = '$email', 
                     student_number = '$student_number', 
-                    yr_sec = '$section', 
-                    group_no = '$groupnumber', 
+                    class = '$class', 
+                    academic_year = '$academic_year', 
+                    year_level = '$year_level', 
+                    semester = '$semester', 
+                    program = '$program', 
                     datetime = NOW()";
 
             // Add avatar only if uploaded
@@ -186,7 +195,65 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         unset($_SESSION['userExist']);
                     }
 
-                    header("Location: profile");
+                    header("Location: changepassword");
+                    exit;
+                } else {
+                    echo "Error updating user: " . mysqli_error($conn);
+                }
+            } else {
+                echo "No valid fields to update.";
+            }
+        } else {
+            // If the user doesn't exist, set session error and redirect
+            $_SESSION['userExist'] = "User does not exist. Please add a new user.";
+            header("Location: changepassword");
+            exit;
+        }
+    } else if (isset($_POST['updateAdminUser'])) {
+
+        $userid = htmlspecialchars($_POST['user_id'], ENT_QUOTES, 'UTF-8');
+        $currentDate = date('Y-m-d H:i:s');
+
+        $query = "SELECT userid FROM user_acount WHERE userid = '$userid' LIMIT 1";
+        $result = mysqli_query($conn, $query);
+
+        if (mysqli_num_rows($result) > 0) {
+            $updateFields = [];
+
+            if (!empty($_POST['name'])) {
+                $tempname = $_POST['name'];
+                $name = ucwords($tempname);
+                $updateFields[] = "name = '$name'";
+            }
+
+            if (!empty($_POST['email'])) {
+                $email = $_POST['email'];
+                $updateFields[] = "email = '$email'";
+            }
+
+            if (!empty($_POST['password'])) {
+                $password = $_POST['password'];
+                $hashedpwd = password_hash($password, PASSWORD_DEFAULT);
+                $updateFields[] = "password = '$hashedpwd'";
+            }
+
+            if (!empty($updateFields)) {
+
+                // Combine the fields into the query
+                $updateQuery = "UPDATE `user_acount` SET " . implode(', ', $updateFields) . " WHERE userid = '$userid'";
+
+                $updateResult = mysqli_query($conn, $updateQuery);
+
+                if ($updateResult) {
+                    if (!empty($_POST['email']) && !empty($_POST['password']) && !empty($_POST['name'])) {
+                        sendCredentials($email, $password, $name);
+                    }
+
+                    if (isset($_SESSION['userExist'])) {
+                        unset($_SESSION['userExist']);
+                    }
+
+                    header("Location: users");
                     exit;
                 } else {
                     echo "Error updating user: " . mysqli_error($conn);

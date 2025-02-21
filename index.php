@@ -1,5 +1,4 @@
     <?php
-    session_start();
 
     // echo print_r($_SESSION);
 
@@ -12,8 +11,6 @@
     if ($checkRoute === '' || $checkRoute === '/') {
         header("Location: home");
     }
-
-
 
     include "totals.php";
     include "connect.php";
@@ -29,61 +26,17 @@
     $default_program = $_SESSION['program'] ?? null;
     ?>
 
-    <!DOCTYPE html>
     <html lang="en">
-
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>QR Attendance Management with Inventory System</title>
-        <link rel="icon" href="assets/img/bulsuhag.png" type="image/x-icon">
-        <link rel="shortcut icon" href="assets/img/bulsuhag.png" type="image/x-icon">
+        <title>Attendance And Inventory</title>
+        <link rel="icon" href="assets/img/favicon.ico" type="image/x-icon">
         <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="assets/style.css">
         <script src="assets/script.js"></script>
         <script src="src/scanner.js"></script>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-
-        <script>
-            // function reloadTable() {
-            //     var table = document.getElementById('attendancetoday');
-            //     // alert('Table reloaded!');
-            // }
-
-            // function checkSessionChange() {
-            //     var currentSessionValueofGroup = "<?php echo isset($_SESSION['groupnumber']) ? $_SESSION['groupnumber'] : '' ?>";
-            //     var currentSessionValueofSection = "<?php echo isset($_SESSION['section']) ? $_SESSION['section'] : '' ?>";
-
-
-            //     setInterval(function() {
-            //         var xhr = new XMLHttpRequest();
-
-            //         xhr.open('GET', 'session.php', true);
-            //         xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-
-            //         xhr.onload = function() {
-            //             if (xhr.status == 200) {
-            //                 var serverSessionValueforGroup = xhr.responseText.substring(2, 4);
-            //                 var serverSessionValueforSection = xhr.responseText.substring(0, 2);
-
-            //                 if (currentSessionValueofGroup !== serverSessionValueforGroup || currentSessionValueofSection !== serverSessionValueforSection) {
-            //                     reloadTable();
-            //                     currentSessionValueofGroup = serverSessionValueforGroup;
-            //                     currentSessionValueofSection = serverSessionValueforSection;
-            //                 }
-            //             } else {
-            //                 console.error('Error checking session.');
-            //             }
-            //         };
-
-            //         xhr.send();
-            //     }, 5000);
-            // }
-
-            // document.addEventListener('DOMContentLoaded', function() {
-            //     checkSessionChange();
-            // });
-        </script>
     </head>
 
     <style>
@@ -172,25 +125,30 @@
 
                             <!-- Program Dropdown -->
                             <select name="program" id="program" class="col-span-2 cursor-pointer px-5 border border-gray-500 text-gray-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 hover:bg-gray-50 w-full py-2">
-                                <option disabled <?php echo is_null($default_program) ? 'selected' : ''; ?>>Program</option>
+                                <option disabled <?= is_null($default_program) ? 'selected' : ''; ?>>Program</option>
                                 <?php
-                                $gn_query = "
-                                    SELECT DISTINCT student.class, program.program_name, program.id 
+                                $p_query = "
+                                    SELECT DISTINCT program.program_name, program.id 
                                     FROM student 
-                                    LEFT JOIN program ON student.program = program.id 
+                                    JOIN program ON student.program = program.id 
                                     WHERE student.faculty_id = '$faculty_id' 
-                                    AND student.program != '0' AND student.program != ''    
-                                    ORDER BY student.program ASC
+                                    AND student.program NOT IN ('0', '') 
+                                    ORDER BY program.program_name ASC
                                 ";
-                                $gn_result = mysqli_query($conn, $gn_query);
-                                if ($gn_result && mysqli_num_rows($gn_result) > 0) {
-                                    while ($gn_row = mysqli_fetch_assoc($gn_result)) {
-                                        $selected = ($gn_row['id'] === $default_program) ? 'selected' : '';
-                                        echo "<option value='" . htmlspecialchars($gn_row['id']) . "' $selected>" . htmlspecialchars($gn_row['program_name']) . "</option>";
+                                $p_result = mysqli_query($conn, $p_query);
+                                
+                                $programs = [];
+                                while ($p_row = mysqli_fetch_assoc($p_result)) {
+                                    if (!isset($programs[$p_row['program_name']])) {
+                                        $selected = ($p_row['id'] === $default_program) ? 'selected' : '';
+                                        echo "<option value='{$p_row['id']}' $selected>{$p_row['program_name']}</option>";
+                                        $programs[$p_row['program_name']] = true;
                                     }
                                 }
                                 ?>
                             </select>
+
+
 
                         </div>
 
@@ -292,7 +250,7 @@
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="tableBody">
                                     <?php include "./attendanceToday.php"; ?>
                                 </tbody>
                             </table>
@@ -326,40 +284,50 @@
                 var xhr = new XMLHttpRequest();
                 xhr.open('POST', 'session.php', true);
                 xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-                xhr.send(selectedElementId + '=' + encodeURIComponent(newValue));
 
+                // Ensure key=value format is correct
+                var postData = encodeURIComponent(selectedElementId) + '=' + encodeURIComponent(newValue);
+                
                 xhr.onload = function() {
                     if (xhr.status === 200) {
-                        console.log('Session variable set successfully for ' + selectedElementId);
-                        console.log(xhr.responseText);
+                        console.log("Session updated:", xhr.responseText); // Debugging
+                        setTimeout(reloadTable, 500); // Delay to ensure session is updated before reloading
                     } else {
                         console.error('Error setting session variable.');
                     }
                 };
+
+                xhr.onerror = function() {
+                    console.error("Network error occurred while updating session.");
+                };
+
+                xhr.send(postData);
             }
 
-            function reloadTable() {
+            function updateSession(selectedElementId, newValue) {
                 var xhr = new XMLHttpRequest();
-                xhr.open('GET', 'attendanceLogs.php', true);
+                xhr.open('POST', 'session.php', true);
+                xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
 
-                // Correctly handle the load event to ensure the request is completed
+                // Ensure key=value format is correct
+                var postData = encodeURIComponent(selectedElementId) + '=' + encodeURIComponent(newValue);
+                
                 xhr.onload = function() {
                     if (xhr.status === 200) {
-                        console.log('Table reloaded successfully');
-                        // console.log(xhr.responseText); // Debug: View the response from the server
-                        // Optionally, update the table content dynamically
-                        // document.getElementById('tableContainer').innerHTML = xhr.responseText;
+                        console.log("Session updated:", xhr.responseText); // Debugging
+                        setTimeout(reloadTable, 500); // Delay to ensure session is updated before reloading
                     } else {
-                        console.error('Error reloading the table.');
+                        console.error('Error setting session variable.');
                     }
                 };
 
                 xhr.onerror = function() {
-                    console.error('Network error occurred while reloading the table.');
+                    console.error("Network error occurred while updating session.");
                 };
 
-                xhr.send();
+                xhr.send(postData);
             }
+
 
             // Dropdown elements
             var selectedClass = document.getElementById('class');
@@ -373,31 +341,41 @@
             selectedClass.addEventListener('change', function() {
                 var selectedOption = selectedClass.value;
                 updateSession('class', selectedOption);
-                reloadTable();
+                setTimeout(() => {
+                    location.reload(); // Refresh the page after session update
+                }, 300);
             });
 
             selectedSemester.addEventListener('change', function() {
                 var selectedOption = selectedSemester.value;
                 updateSession('semester', selectedOption);
-                reloadTable();
+                setTimeout(() => {
+                    location.reload(); // Refresh the page after session update
+                }, 300);
             });
 
             selectedRoom.addEventListener('change', function() {
                 var selectedOption = selectedRoom.value;
                 updateSession('room', selectedOption);
-                reloadTable();
+                setTimeout(() => {
+                    location.reload(); // Refresh the page after session update
+                }, 300);
             });
 
             selectedProgram.addEventListener('change', function() {
                 var selectedOption = selectedProgram.value;
                 updateSession('program', selectedOption);
-                reloadTable();
+                setTimeout(() => {
+                    location.reload(); // Refresh the page after session update
+                }, 300);
             });
 
             selectedAcadYear.addEventListener('change', function() {
                 var selectedOption = selectedAcadYear.value;
                 updateSession('academic_year', selectedOption);
-                reloadTable();
+                setTimeout(() => {
+                    location.reload(); // Refresh the page after session update
+                }, 300);
             });
 
             // selectedYearLvl.addEventListener('change', function() {

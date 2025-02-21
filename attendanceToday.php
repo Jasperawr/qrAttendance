@@ -1,8 +1,7 @@
 <?php
 
+// print_r($_SESSION);
 include "connect.php";
-
-// echo print_r($_SESSION);
 
 $class = isset($_SESSION['class']) ? $_SESSION['class'] : null;
 $program = isset($_SESSION['program']) ? $_SESSION['program'] : null;
@@ -12,7 +11,6 @@ $academic_year = isset($_SESSION['academic_year']) ? $_SESSION['academic_year'] 
 $room = isset($_SESSION['room']) ? $_SESSION['room'] : null;
 $faculty_id = isset($_SESSION['faculty_id']) ? $_SESSION['faculty_id'] : null;
 
-// echo print_r($_SESSION);
 
 // If section and group number are provided, fetch the data
 $query = "
@@ -37,8 +35,9 @@ $query = "
         AND student.semester = '$semester' 
         AND student.program = '$program' 
         AND student.academic_year = '$academic_year'
-        OR attendance_log.room = '$room'
 ";
+
+//[class] => COMPTECH 3A (G1) [semester] => 1st semester [academic_year] => 2025-2026 [program] => 7
 
 $result = mysqli_query($conn, $query);
 
@@ -93,7 +92,7 @@ if ($result) {
         ?>
         <tr class="w-full">
             <td colSpan="6" class="w-full text-center bg-white py-4">
-                No Data Available.
+                No Data Retrieve.
             </td>
         </tr>
     <?php

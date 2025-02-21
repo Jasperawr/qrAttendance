@@ -126,7 +126,28 @@ function allItms($conn)
 function allInv($conn)
 {
 
-    $query = "SELECT id from faculty_inventory_logs";
+    $query = "
+        SELECT 
+            l.id AS log_id, 
+            l.faculty_id, 
+            l.quantity, 
+            l.datetime AS log_datetime, 
+            i.item_id, 
+            i.item_name, 
+            i.datetime AS item_datetime,
+            u.name, 
+            u.userid, 
+            u.email
+        FROM 
+            faculty_inventory_logs l
+        INNER JOIN 
+            items i ON l.item_id = i.item_id
+        INNER JOIN 
+            user_acount u ON l.faculty_id = u.id
+        ORDER BY 
+            l.id DESC;
+    ";
+
     $result = mysqli_query($conn, $query);
 
     if (mysqli_num_rows($result) > 0) {

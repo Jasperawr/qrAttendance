@@ -1,11 +1,13 @@
     <?php
-    session_start();
+    // session_start();
 
     if (!isset($_SESSION['loggedin']) && !$_SESSION['loggedin'] == "true") {
         header("Location: login.php");
         exit;
     }
 
+    $faculty_id = $_SESSION['faculty_id'];
+    $role = $_SESSION['role'];
     ?>
 
     <!DOCTYPE html>
@@ -33,7 +35,7 @@
             <div class="flex h-screen justify-around font-poppins pt-[100px] bg-gray-50">
                 <div class="flex justify-center h-full w-full bg-opacity-75">
 
-                    <div class="mr-[30px] w-full px-[200px]">
+                    <div class="mr-[30px] w-full pl-[10%] pr-[5%]">
 
 
 
@@ -67,20 +69,34 @@
                             </div>
 
                             <div class="flex gap-5 w-full">
-                                <select name="section" id="section" class="cursor-pointer px-5 border border-gray-500 text-gray-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 hover:bg-gray-50 w-full py-2">
-                                    <option selected disabled>Class Section</option>
+                                <select name="class" id="class" class="cursor-pointer px-5 border border-gray-500 text-gray-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 hover:bg-gray-50 w-full py-2">
+                                    <option selected disabled>Select Class Section</option>
                                     <?php
-                                    $faculty_id = $_SESSION['faculty_id'];
+                                    
+                                    $ys_query = "";
                                     // Query to get unique class data, excluding class '0', NULL, or empty values
-                                    $ys_query = "
-                                SELECT DISTINCT class 
-                                FROM student 
-                                WHERE faculty_id = '$faculty_id' 
-                                AND class != '0' 
-                                AND class != '' 
-                                AND class IS NOT NULL 
-                                ORDER BY class ASC
-                            ";
+
+                                    if($role === "Admin"){
+                                        $ys_query = "
+                                        SELECT DISTINCT class 
+                                        FROM student 
+                                        WHERE class != '0' 
+                                        AND class != '' 
+                                        AND class IS NOT NULL 
+                                        ORDER BY class ASC
+                                    ";
+                                    }else{
+                                            $ys_query = "
+                                            SELECT DISTINCT class 
+                                            FROM student 
+                                            WHERE faculty_id = '$faculty_id'
+                                            AND class != '0' 
+                                            AND class != '' 
+                                            AND class IS NOT NULL 
+                                            ORDER BY class ASC
+                                        ";
+                                    }
+                                    
                                     $ys_result = mysqli_query($conn, $ys_query);
 
                                     if ($ys_result && mysqli_num_rows($ys_result) > 0) {
@@ -97,33 +113,46 @@
 
                                 <select class="cursor-pointer px-5 border border-gray-500 text-gray-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 hover:bg-gray-50 w-full py-2"
                                     id="semester" name="semester">
-                                    <option disabled selected>Select Semester</option>
+                                    <option selected disabled >Select Semester</option>
                                     <option value="1st semester">1st Semester</option>
                                     <option value="2nd semester">2nd Semester</option>
                                     <option value="summer">Summer</option>
                                 </select>
 
                                 <select name="academic_year" id="academic_year" class="cursor-pointer px-5 border border-gray-500 text-gray-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 hover:bg-gray-50 w-full py-2">
-                                    <option selected disabled>Academic Year</option>
+                                    <option selected disabled>Select Academic Year</option>
                                     <?php
-                                    $faculty_id = $_SESSION['faculty_id'];
-                                    // Query to get unique class data, excluding class '0', NULL, or empty values
-                                    $ys_query = "
-                                SELECT DISTINCT academic_year 
-                                FROM student 
-                                WHERE faculty_id = '$faculty_id' 
-                                AND academic_year != '0' 
-                                AND academic_year != '' 
-                                AND academic_year IS NOT NULL 
-                                ORDER BY class ASC
-                            ";
-                                    $ys_result = mysqli_query($conn, $ys_query);
+                                    $ay_query ="";
+                                    
+                                    if($role === "Admin"){
+                                        $ay_query = "
+                                            SELECT DISTINCT academic_year 
+                                            FROM student 
+                                            WHERE academic_year != '0' 
+                                            AND academic_year != '' 
+                                            AND academic_year IS NOT NULL 
+                                            ORDER BY academic_year ASC
+                                        ";
+                                    }else{
+                                        $ay_query = "
+                                            SELECT DISTINCT academic_year 
+                                            FROM student 
+                                            WHERE faculty_id = '$faculty_id' 
+                                            AND academic_year != '0' 
+                                            AND academic_year != '' 
+                                            AND academic_year IS NOT NULL 
+                                            ORDER BY academic_year ASC
+                                        ";
+                                    }
+                                    
+                                    
+                                    $ay_result = mysqli_query($conn, $ay_query);
 
-                                    if ($ys_result && mysqli_num_rows($ys_result) > 0) {
-                                        while ($ys_row = mysqli_fetch_assoc($ys_result)) {
+                                    if ($ay_result && mysqli_num_rows($ay_result) > 0) {
+                                        while ($ay_row = mysqli_fetch_assoc($ay_result)) {
                                     ?>
-                                            <option value="<?php echo $ys_row['academic_year']; ?>">
-                                                <?php echo htmlspecialchars($ys_row['academic_year']); ?>
+                                            <option value="<?php echo $ay_row['academic_year']; ?>">
+                                                <?php echo htmlspecialchars($ay_row['academic_year']); ?>
                                             </option>
                                     <?php
                                         }
@@ -132,23 +161,36 @@
                                 </select>
 
                                 <select name="program" id="program" class="col-span-full cursor-pointer px-5 border border-gray-500 text-gray-900 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 hover:bg-gray-50 w-full py-2">
-                                    <option selected disabled>Program</option>
+                                    <option selected disabled> Select Program</option>
                                     <?php
-                                    // Query to get unique Group Number data, excluding class '0' or empty, with LEFT JOIN and DISTINCT
-                                    $gn_query = "
-                                SELECT DISTINCT student.class, program.program_name 
-                                FROM student 
-                                LEFT JOIN program ON student.program = program.id 
-                                WHERE student.faculty_id = '$faculty_id' 
-                                AND student.class != '0' AND student.class != ''  -- Exclude class '0' and empty
-                                ORDER BY student.class ASC
-                            ";
+
+                                    $gn_query = "";
+
+                                    if($role === "Admin"){
+                                        $gn_query = "
+                                            SELECT DISTINCT student.program, program.program_name, program.id as program_id
+                                            FROM student 
+                                            LEFT JOIN program ON student.program = program.id 
+                                            WHERE student.program != '0' AND student.program != ''  -- Exclude program '0' and empty
+                                            ORDER BY student.program ASC
+                                        ";
+                                    }else{
+                                        $gn_query = "
+                                            SELECT DISTINCT student.program, program.program_name, program.id as program_id
+                                            FROM student 
+                                            LEFT JOIN program ON student.program = program.id 
+                                            WHERE student.faculty_id = '$faculty_id' 
+                                            AND student.program != '0' AND student.program != ''  -- Exclude program '0' and empty
+                                            ORDER BY student.program ASC
+                                        ";
+                                    }
+                                    
                                     $gn_result = mysqli_query($conn, $gn_query);
 
                                     if ($gn_result && mysqli_num_rows($gn_result) > 0) {
                                         while ($gn_row = mysqli_fetch_assoc($gn_result)) {
                                     ?>
-                                            <option value="<?php echo $gn_row['class']; ?>">
+                                            <option value="<?php echo $gn_row['program_id']; ?>">
                                                 <?php echo htmlspecialchars($gn_row['program_name']); ?>
                                             </option>
                                     <?php
@@ -157,11 +199,7 @@
                                     ?>
                                 </select>
                             </div>
-
-
                         </div>
-
-
 
                         <div class="relative overflow-x-auto shadow-md shadow-gray-200 rounded-lg">
 
@@ -180,22 +218,34 @@
                                                 <label for="checkbox1" class="">All</label>
                                             </div>
                                         </th>
-                                        <th scope="col" class="px-6 py-3">
+                                        <th scope="col" class="px-3 py-3">
                                             Student Name
                                         </th>
-                                        <th scope="col" class="px-6 py-3">
+                                        <th scope="col" class="px-3 py-3">
                                             ID Number
                                         </th>
-                                        <th scope="col" class="px-6 py-3">
-                                            Section
+                                        <th scope="col" class="px-3 py-3">
+                                            Email
                                         </th>
-                                        <th scope="col" class="px-6 py-3">
-                                            Group
+                                        <th scope="col" class="px-3 py-3">
+                                            Class
                                         </th>
-                                        <th scope="col" class="px-6 py-3">
+                                        <th scope="col" class="px-3 py-3">
+                                            Semester
+                                        </th>
+                                        <th scope="col" class="px-3 py-3">
+                                            Year Level
+                                        </th>
+                                        <th scope="col" class="px-3 py-3">
+                                            Academic Year
+                                        </th>
+                                        <th scope="col" class="px-3 py-3">
+                                            Program
+                                        </th>
+                                        <th scope="col" class="px-3 py-3">
                                             Date
                                         </th>
-                                        <th scope="col" class="text-center px-6 py-3">
+                                        <th scope="col" class="text-center px-3 py-3">
                                             Action
                                         </th>
                                     </tr>
@@ -206,13 +256,39 @@
                             </table>
                         </div>
                     </div>
-
                 </div>
             </div>
         </form>
 
 
         <script>
+            document.getElementById("deleteButton").addEventListener("click", () => {
+                let selectedIds = getSelectedCheckboxes(); // Get selected IDs
+
+                if (selectedIds.length === 0) {
+                    alert("Please select at least one record to delete.");
+                    return;
+                }
+
+                fetch("delete.php", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: "deleteAllSelected=true&delete_ids=" + encodeURIComponent(selectedIds.join(",")),
+                })
+                .then(response => response.text())
+                .then(data => {
+                    console.log("Server Response:", data);
+                    location.reload(); // Refresh after successful deletion
+                })
+                .catch(error => console.error("Error:", error));
+            });
+
+            function getSelectedCheckboxes() {
+                return Array.from(document.querySelectorAll(".checkboxes:checked"))
+                            .map(checkbox => checkbox.value); // Get all checked values
+            }
+
+
             document.addEventListener("DOMContentLoaded", function() {
                 setupDateFilter("dateFilter", "allStudents", "dateColumn");
             });
@@ -241,7 +317,69 @@
                 checkbox.addEventListener('change', updateCheckboxCount);
             });
 
-            updateCheckboxCount()
+            updateCheckboxCount();
+
+            // Filtering student table
+            const sectionDropdown = document.getElementById("class");
+            const semesterDropdown = document.getElementById("semester");
+            const academicYearDropdown = document.getElementById("academic_year");
+            const programDropdown = document.getElementById("program");
+            const table = document.getElementById("allStudents");
+            const rows = table.getElementsByTagName("tr");
+
+            const programMap = {
+                "1": "BSSE",
+                "2": "BSEE",
+                "3": "BTLE",
+                "4": "BSHM",
+                "5": "BSTM",
+                "6": "BSIT",
+                "7": "BIT"
+            };
+
+            function filterTable() {
+                const selectedSection = sectionDropdown.value.trim();
+                const selectedSemester = semesterDropdown.value.trim();
+                const selectedAcademicYear = academicYearDropdown.value.trim();
+                const selectedProgramId = programDropdown.value.trim();
+                const selectedProgramAbbreviation = (programMap[selectedProgramId] || ""); // Convert to lowercase
+
+                console.log(`Filtering: ${selectedSection}, ${selectedSemester}, ${selectedAcademicYear}, ${selectedProgramAbbreviation}`);
+
+                for (let i = 1; i < rows.length; i++) { // Skip header row
+                    let sectionCell = rows[i].querySelector(".class");
+                    let semesterCell = rows[i].querySelector(".semester");
+                    let academicYearCell = rows[i].querySelector(".academic_year");
+                    let programCell = rows[i].querySelector(".program");
+
+                    // Ensure text values are properly extracted
+                    let sectionText = sectionCell ? sectionCell.textContent.trim() : "";
+                    let semesterText = semesterCell ? semesterCell.textContent.trim() : "";
+                    let academicYearText = academicYearCell ? academicYearCell.textContent.trim() : "";
+                    let programText = programCell ? programCell.textContent.trim() : "";
+
+                    let sectionMatch = selectedSection === "" || sectionText.includes(selectedSection);
+                    let semesterMatch = selectedSemester === "" || semesterText.includes(selectedSemester);
+                    let academicYearMatch = selectedAcademicYear === "" || academicYearText.includes(selectedAcademicYear);
+                    let programMatch = selectedProgramId === "" || programText.includes(selectedProgramAbbreviation);
+
+                    // Log for debugging
+                    console.log(`Row ${i}: Section=${sectionText}, Semester=${semesterText}, Year=${academicYearText}, Program=${programText}`);
+                    console.log(`Matches: Section=${sectionMatch}, Semester=${semesterMatch}, Year=${academicYearMatch}, Program=${programMatch}`);
+                    console.log(sectionCell);
+
+                    // Show the row only if it matches all selected filters
+                    rows[i].style.display = (sectionMatch && semesterMatch && academicYearMatch && programMatch) ? "" : "none";
+                }
+            }
+
+            // Apply filter on any dropdown change
+            sectionDropdown.addEventListener("change", filterTable);
+            semesterDropdown.addEventListener("change", filterTable);
+            academicYearDropdown.addEventListener("change", filterTable);
+            programDropdown.addEventListener("change", filterTable);
+
+
         </script>
     </body>
 

@@ -1,5 +1,5 @@
     <?php
-    session_start();
+    // session_start();
 
     // include "../components/loader.php";
 
@@ -26,6 +26,19 @@
     </head>
 
     <body>
+
+    <div id="loadingScreen" class="hidden z-50 fixed inset-0 bg-black bg-opacity-50 flex flex-col justify-center items-center text-white text-xl">
+        <p id="loadingText">Processing... Please wait</p>
+        <div class="w-64 mt-4 bg-gray-700 rounded-full">
+            <div id="progressBar" class="h-3 bg-blue-500 rounded-full w-0"></div>
+        </div>
+        <p id="progressText" class="text-sm mt-2">0%</p>
+        <button id="successButton" class="hidden mt-4 bg-green-500 text-white px-4 py-1 rounded text-sm hover:bg-green-700 transition-all duration-300 ease-in-out" onclick="window.location.href='students'">
+            Go to Students
+        </button>
+    </div>
+
+
 
         <div id="alert-2" class="<?php if (isset($_SESSION['studentExist'])) {
                                         echo "flex";
@@ -234,7 +247,7 @@
                     <p class="text-xs text-gray-500">This is the form for adding a student. Just fill the form and click the add button.</p>
 
                     <!-- Form -->
-                    <form action="./add.php" method="post" enctype="multipart/form-data" class="flex flex-col gap-4 justify-center items-center w-full">
+                    <form id="uploadForm" method="post" enctype="multipart/form-data" class="flex flex-col gap-4 justify-center items-center w-full">
 
 
                         <div class="flex gap-5 w-full">
@@ -285,8 +298,8 @@
                                 <select class="w-full p-[10.5px] px-4 border border-gray-300 text-gray-900 text-sm rounded focus:ring-blue-500 focus:border-blue-500 block  outline-none"
                                     id="semester1" name="semester1">
                                     <option disabled selected>Select Semester</option>
-                                    <option value="1st semester1">1st Semester</option>
-                                    <option value="2nd semester1">2nd Semester</option>
+                                    <option value="1st semester">1st Semester</option>
+                                    <option value="2nd semester">2nd Semester</option>
                                     <option value="summer">Summer</option>
                                 </select>
                                 <p class="opacity-0 mb-0.25 px-2 text-[11px] text-red-600 "><span class="font-medium">Oops!</span> Credential is wrong!</p>
@@ -383,6 +396,84 @@
         </div>
 
         <script>
+
+            function showLoadingScreen(message = "Processing... Please wait") {
+                document.getElementById("loadingScreen").classList.remove("hidden");
+                document.getElementById("progressBar").style.width = "0%";
+                document.getElementById("progressText").innerText = "0%";
+                document.getElementById("loadingText").innerText = message;
+                document.getElementById("successButton").classList.add("hidden");
+            }
+
+            function updateLoadingProgress(percent, text = "") {
+                let progressBar = document.getElementById("progressBar");
+                let progressText = document.getElementById("progressText");
+
+                progressBar.style.width = percent + "%";
+                progressText.innerText = `${percent}% ${text}`;
+            }
+
+            function hideLoadingScreen(successMessage = "Process Completed!", redirectURL = null) {
+                let loadingText = document.getElementById("loadingText");
+                let successButton = document.getElementById("successButton");
+
+                loadingText.innerText = successMessage;
+                document.getElementById("progressBar").style.width = "100%";
+                document.getElementById("progressText").innerText = "100%";
+
+                successButton.classList.remove("hidden");
+                if (redirectURL) {
+                    successButton.onclick = () => window.location.href = redirectURL;
+                } else {
+                    successButton.style.display = "none"; // Hide button if no redirect
+                }
+            }
+
+            function hideLoadingOnError(errorMessage) {
+                alert(errorMessage);
+                document.getElementById("loadingScreen").classList.add("hidden");
+            }
+
+            document.getElementById("uploadForm").addEventListener("submit", async function (event) {
+                event.preventDefault();
+                showLoadingScreen("Uploading File...");
+
+                let formData = new FormData(this);
+                formData.append("uploadExcel", "1");
+
+                try {
+                    const response = await fetch("add.php", { method: "POST", body: formData });
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+
+                    let receivedText = "";
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        receivedText += decoder.decode(value, { stream: true });
+                        const lines = receivedText.trim().split("\n");
+
+                        lines.forEach((line) => {
+                            let cleanLine = line.replace("data: ", "").trim();
+                            let parts = cleanLine.split("|");
+                            let percent = parseInt(parts[0]);
+
+                            if (!isNaN(percent)) {
+                                updateLoadingProgress(percent, parts[1] || "");
+                            }
+
+                            if (percent === 100) {
+                                hideLoadingScreen("Upload Successful!", "students");
+                            }
+                        });
+                    }
+                } catch (error) {
+                    hideLoadingOnError("Upload failed! " + error);
+                }
+            });
+
             // Get query parameter value
             const typeUpload = new URLSearchParams(window.location.search).get('typeUpload');
 
@@ -437,7 +528,7 @@
                         filteredData.forEach((row) => {
                             const studentNo = row[studentNoIndex] || '';
                             const fullName = row[fullNameIndex] || '';
-                            const email = row[38] || '';
+                            const email = row[38] || ''; // Change value to 38
 
                             const rowElement = document.createElement("tr");
                             rowElement.innerHTML = `<td class="px-4 py-2"><input type="text" name="student_no[]" value="${studentNo}" hidden>${studentNo}</td>

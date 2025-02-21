@@ -7,6 +7,7 @@ if (isset($_SESSION['notifChange'])) {
 }
 
 $faculty_id = $_SESSION['faculty_id'];
+$role = $_SESSION['role'];
 
 $query = "
     SELECT 

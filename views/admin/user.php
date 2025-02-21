@@ -1,5 +1,5 @@
 <?php
-session_start();
+// session_start();
 
 if (!isset($_SESSION['loggedin']) && !$_SESSION['loggedin'] == "true") {
     header("Location: login.php");
@@ -210,13 +210,10 @@ if (!isset($_SESSION['loggedin']) && !$_SESSION['loggedin'] == "true") {
                                 <?php include "./userTable.php"; ?>
                             </tbody>
                         </table>
+                        
                     </div>
                 </div>
-
-
-
             </div>
-
         </div>
     </div>
 
